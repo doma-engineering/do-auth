@@ -1,4 +1,4 @@
-defmodule DoAuth.Session do
+defmodule DoAuth.Cache do
   @moduledoc """
   OTP subtree that concerns:
    - Session management for non-atomic client interactions as

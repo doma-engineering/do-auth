@@ -6,6 +6,7 @@ defmodule DoAuth.MixProject do
       app: :do_auth,
       version: "0.1.0",
       elixir: "~> 1.9",
+      compilers: [:phoenix] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: [
@@ -31,6 +32,7 @@ defmodule DoAuth.MixProject do
     [
       {:phoenix, "~> 1.5.0"},
       {:phoenix_ecto, "~> 4.0"},
+      {:phoenix_html, "~> 2.14"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.1"}
     ]

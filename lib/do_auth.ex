@@ -10,7 +10,7 @@ defmodule DoAuth do
     children = [
       DoAuth.Web,
       DoAuth.Persistence,
-      DoAuth.Session
+      DoAuth.Cache
     ]
 
     IO.puts("Faster, leaner, and more reliable!")

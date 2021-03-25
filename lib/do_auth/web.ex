@@ -8,12 +8,52 @@ defmodule DoAuth.Web do
   plug(Plug.Static,
     at: "/",
     from: {:do_auth, "priv/static"},
-    gzip: false
+    gzip: false,
+    only: ~w(css fonts images js favicon.ico robots.txt)
   )
 
-  plug(:not_found)
+  plug(Plug.RequestId)
+  plug(Plug.Logger)
 
-  def not_found(conn, _) do
-    send_resp(conn, 404, "not found")
+  plug(Plug.Parsers,
+    parsers: [:urlencoded, :multipart, :json],
+    pass: ["*/*"],
+    json_decoder: Phoenix.json_library()
+  )
+
+  plug(DoAuth.Web.Router)
+
+  #### Boring meta-programming that seem to be idiomatic to Phoenix :thinking:
+
+  def controller do
+    quote do
+      use Phoenix.Controller, namespace: DoAuth.Web
+      import Plug.Conn
+    end
+  end
+
+  def router do
+    quote do
+      use Phoenix.Router
+      import Plug.Conn
+      import Phoenix.Controller
+    end
+  end
+
+  def view do
+    quote do
+      use Phoenix.View,
+        root: "lib/do_auth/web/templates",
+        namespace: DoAuth.Web
+
+      use Phoenix.HTML
+    end
+  end
+
+  @doc """
+  When used, dispatch to the appropriate controller/view/etc.
+  """
+  defmacro __using__(which) when is_atom(which) do
+    apply(__MODULE__, which, [])
   end
 end
