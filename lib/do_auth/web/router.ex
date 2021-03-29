@@ -11,7 +11,7 @@ defmodule DoAuth.Web.Router do
 
   scope "/", DoAuth do
     pipe_through(:browser)
-    get("/", ZeroVC.Controller, :index)
-    get("/hello/world", ZeroVC.Controller, :cheer)
+    get("/", ZeroVC.ZeroVC, :index)
+    get("/hello/world", ZeroVC.ZeroVC, :cheer)
   end
 end

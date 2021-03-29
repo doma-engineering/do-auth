@@ -1,4 +1,4 @@
-defmodule DoAuth.ZeroVC.Controller do
+defmodule DoAuth.ZeroVC.ZeroVC do
   @moduledoc """
   ZeroVC plug implementation.
   It defines API that allows:
@@ -12,11 +12,13 @@ defmodule DoAuth.ZeroVC.Controller do
 
   def init(x), do: x
 
+  @spec index(Plug.Conn.t(), any) :: Plug.Conn.t()
   def index(c, _) do
     IO.puts("Calling index")
     send_resp(c, 200, "index")
   end
 
+  @spec cheer(Plug.Conn.t(), any) :: Plug.Conn.t()
   def cheer(c, _) do
     IO.puts("Calling cheer")
     send_resp(c, 200, "are you a'right luv")

@@ -22,3 +22,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 do_auth-*.tar
 
+# Don't leak the secrets!
+/config/*.secret.exs
