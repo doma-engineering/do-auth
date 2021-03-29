@@ -6,6 +6,7 @@ defmodule DoAuth.Web.Router do
 
   pipeline :browser do
     plug(:accepts, ["html"])
+    plug(:fetch_session)
     plug(:put_secure_browser_headers)
   end
 

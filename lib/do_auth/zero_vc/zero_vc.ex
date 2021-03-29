@@ -14,13 +14,14 @@ defmodule DoAuth.ZeroVC.ZeroVC do
 
   @spec index(Plug.Conn.t(), any) :: Plug.Conn.t()
   def index(c, _) do
-    IO.puts("Calling index")
-    send_resp(c, 200, "index")
+    c = put_session(c, :hello, "world")
+    send_resp(c, 200, "put")
   end
 
   @spec cheer(Plug.Conn.t(), any) :: Plug.Conn.t()
   def cheer(c, _) do
-    IO.puts("Calling cheer")
-    send_resp(c, 200, "are you a'right luv")
+    msg = get_session(c, :hello)
+    c = put_session(c, :hello, msg <> msg)
+    send_resp(c, 200, msg)
   end
 end

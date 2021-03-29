@@ -6,6 +6,7 @@ defmodule DoAuth do
 
   use Application
 
+  @spec start(any, any) :: {:error, any} | {:ok, pid}
   def start(_, _) do
     children = [
       DoAuth.Web,
