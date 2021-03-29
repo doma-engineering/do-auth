@@ -1,21 +1,18 @@
 # DoAuth
 
-**TODO: Add description**
+## Prepare dev env
 
-## Installation
+1. Generate two secrets with `phx.gen.secret`
+2. Populate `config/dev.secret.exs` following example in `config/test.non-secret.exs`
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `do_auth` to your list of dependencies in `mix.exs`:
+## Running in dev env
 
-```elixir
-def deps do
-  [
-    {:do_auth, "~> 0.1.0"}
-  ]
-end
-```
+`mix phx.server`
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/do_auth](https://hexdocs.pm/do_auth).
+## Prepare release
 
+We don't know how to work with releases in Elixir yet, but the following two
+steps are necessary for sure:
+
+1. Generate two secrets with `phx.gen.secret`
+2. Populate `config/prod.secret.exs` following example in `config/test.non-secret.exs`
