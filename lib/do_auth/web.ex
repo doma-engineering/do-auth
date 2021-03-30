@@ -25,12 +25,12 @@ defmodule DoAuth.Web do
     only: ~w(css fonts images js favicon.ico robots.txt)
   )
 
-  # TODO: Move it to CHAP.CHAP
+  # TODO: Figure out how to move this stuff to Chappy.Chappy
   # Abuses Set-Cookie header to put a signed KVS into it! :mind-blown.png:
   # Maximum amount of data stored in one session is very limited: 4KiB (4096 bytes)
   plug(Plug.Session,
     store: :cookie,
-    key: "_do_auth_non_tracking_cookie",
+    key: "_doma_non_tracking_replay_prevention",
     # TODO: rotate salts regularly!
     signing_salt: Application.get_env(:do_auth, DoAuth.Web) |> Keyword.fetch!(:signing_salt),
     same_site: "Strict"
