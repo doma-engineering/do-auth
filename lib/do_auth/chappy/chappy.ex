@@ -83,8 +83,6 @@ defmodule DoAuth.Chappy.Chappy do
 
   def init(x), do: x
 
-  plug(:fetch_session)
-
   @doc """
   Only permit initialisation of a challenge chain from "the endpoint".
   All the other occurrecnces of calls to this controller shall be assumed to
