@@ -42,6 +42,27 @@ defmodule DoAuth.Crypto do
   @spec default_params :: params()
   def default_params(), do: %{ops: :moderate, mem: :moderate, salt_size: @salt_size}
 
+  @typedoc """
+  This is a keypair, marking explicitly what's private (secret) key and
+  what's public key.
+  """
+  @type keypair :: %{secret: binary(), public: binary()}
+
+  @typedoc """
+  Marked private (secret) key.
+  """
+  @type secret :: %{secret: binary()}
+
+  @typedoc """
+  Marked public key.
+  """
+  @type public :: %{public: binary()}
+
+  @typedoc """
+  Detached signature along with the public key needed to validate.
+  """
+  @type detached_sig :: %{public: binary(), signature: binary()}
+
   @doc """
   Generate slip and main key from password with given parameters.
   This function is used directly for testing and flexibility, but shouldn't be normally used.
@@ -69,5 +90,30 @@ defmodule DoAuth.Crypto do
   @spec main_key_reproduce(iolist(), slip()) :: binary()
   def main_key_reproduce(pass, %{ops: ops, mem: mem, salt: salt}) do
     C.pwhash(pass, salt, ops, mem)
+  end
+
+  @doc """
+  Create a signing keypair from main key at index n.
+  """
+  @spec derive_signing_keypair(binary(), pos_integer) :: %{public: binary, secret: binary}
+  def derive_signing_keypair(mkey, n) do
+    C.kdf_derive_from_key(mkey, "signsign", n) |> C.sign_seed_keypair()
+  end
+
+  @doc """
+  Wrapper around detached signatures that creates an object tracking
+  corresponding public key.
+  """
+  @spec sign(iolist(), keypair()) :: detached_sig()
+  def sign(msg, %{secret: sk, public: pk}) do
+    %{public: pk, signature: C.sign(msg, sk)}
+  end
+
+  @doc """
+  Verify a detached signature object.
+  """
+  @spec verify(iolist(), detached_sig()) :: boolean
+  def verify(msg, %{public: pk, signature: sig}) do
+    C.sign_verify_detached(sig, msg, pk)
   end
 end

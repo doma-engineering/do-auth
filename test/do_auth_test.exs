@@ -4,6 +4,9 @@ defmodule DoAuthTest do
 
   alias DoAuth.Crypto
 
+  @pass_iolist ["tiny🏯", "grasshōpper👹"]
+  @pass_binary "tiny🏯grasshōpper👹"
+
   test "has secret key base set" do
     assert(
       Application.get_env(:do_auth, DoAuth.Web)
@@ -13,12 +16,21 @@ defmodule DoAuthTest do
 
   test "can generate main (a.k.a. 'master') keys" do
     # Run this once
-    {mkey_real, _} = Crypto.main_key_init(["tiny🏯", "grasshōpper👹"])
+    {mkey_real, _} = Crypto.main_key_init(@pass_iolist)
     # TODO: Prop-test with weak crypto params
-    {mkey, slip} = Crypto.main_key_init(["tiny🏯", "grasshōpper👹"], very_weak_params())
-    mkey1 = Crypto.main_key_reproduce("tiny🏯grasshōpper👹", slip)
+    {mkey, slip} = Crypto.main_key_init(@pass_iolist, very_weak_params())
+    mkey1 = Crypto.main_key_reproduce(@pass_binary, slip)
     assert(mkey == mkey1)
     assert(mkey != mkey_real)
+  end
+
+  test "can create detached signatures from main key" do
+    with {mkey, _} <- Crypto.main_key_init(@pass_iolist, very_weak_params()) do
+      msg = ["hello", " ", "world"]
+      keypair = Crypto.derive_signing_keypair(mkey, 1)
+      detached_signature = Crypto.sign(msg, keypair)
+      assert(Crypto.verify(msg, detached_signature))
+    end
   end
 
   @doc """
