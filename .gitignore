@@ -24,3 +24,7 @@ do_auth-*.tar
 
 # Don't leak the secrets!
 /config/*.secret.exs
+
+# Local postgresql
+/pgdata/
+/logfile
