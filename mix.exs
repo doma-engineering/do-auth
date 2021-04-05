@@ -30,9 +30,11 @@ defmodule DoAuth.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:phoenix, "~> 1.5.0"},
-      {:phoenix_ecto, "~> 4.0"},
+      {:phoenix, "~> 1.5"},
+      {:phoenix_ecto, "~> 4.2"},
       {:phoenix_html, "~> 2.14"},
+      {:ecto_sql, "~> 3.6"},
+      {:postgrex, "~> 0.15"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.1"},
       {:enacl, "~> 1.1"},
