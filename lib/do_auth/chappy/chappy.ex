@@ -81,6 +81,9 @@ defmodule DoAuth.Chappy.Chappy do
   # require Logger
   alias DoAuth.Chappy.ChappyView, as: View
 
+  # TODO: consider making it into a configurable setting
+  @token_size 8
+
   def init(x), do: x
 
   @doc """
@@ -123,7 +126,7 @@ defmodule DoAuth.Chappy.Chappy do
   # TODO: Use this in something like "common dialyzer errors" cheatsheet or
   # post
   defp mk_token(c) do
-    with t <- :crypto.strong_rand_bytes(4) |> :base64.encode() do
+    with t <- :crypto.strong_rand_bytes(@token_size) |> Base.url_encode64() do
       c = put_session(c, :chappy_token, t)
       {Plug.Conn.put_resp_header(c, "x-doma-chappy", t), t}
     end

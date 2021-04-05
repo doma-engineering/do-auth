@@ -35,7 +35,8 @@ defmodule DoAuth.MixProject do
       {:phoenix_html, "~> 2.14"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.1"},
-      {:enacl, "~> 1.1"}
+      {:enacl, "~> 1.1"},
+      {:typed_struct, "~> 0.2.1"}
     ]
   end
 end
