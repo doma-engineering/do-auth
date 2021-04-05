@@ -10,7 +10,7 @@ defmodule DoAuth.DID do
   typedstruct do
     field(:method, String.t(), default: "doma")
     field(:id, Stirng.t(), enforce: true)
-    field(:path, String.t())
+    field(:path, URI.path())
     field(:query, URI.query())
     field(:fragment, URI.fragment())
   end

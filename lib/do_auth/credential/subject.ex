@@ -7,6 +7,6 @@ defmodule DoAuth.Credential.Subject do
 
   typedstruct do
     field(:id, DoAuth.DID.t(), enforce: true)
-    field(:claim, %{binary => any}, enforce: true)
+    field(:claim, %{String.t() => any}, enforce: true)
   end
 end

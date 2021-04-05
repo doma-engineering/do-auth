@@ -5,10 +5,16 @@ defmodule DoAuth.Persistence do
   """
 
   use Supervisor
+  require Logger
 
   def init(_) do
-    IO.inspect(__MODULE__)
-    Supervisor.init([], strategy: :one_for_one)
+    Logger.debug("Initialising #{inspect(__MODULE__)}")
+
+    children = [
+      DoAuth.Repo
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
   end
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}

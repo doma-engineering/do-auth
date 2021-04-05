@@ -14,7 +14,7 @@ defmodule DoAuth.Credential do
       default: ["https://www.w3.org/2018/credentials/v1"]
     )
 
-    field(:id, non_neg_integer(), enforce: true)
+    field(:id, pos_integer(), enforce: true)
 
     field(:type, nonempty_list(list(String.t())),
       default: ["VerifiableCredential", "DoauthCredential"]

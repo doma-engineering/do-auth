@@ -1,5 +1,12 @@
 import Config
 
+# Credentials come from *.secret.exs
+config :do_auth, DoAuth.Repo,
+  database: "do_auth_repo",
+  hostname: "localhost"
+
+config :do_auth, ecto_repos: [DoAuth.Repo]
+
 config :phoenix, :json_library, Jason
 
 # Usage example

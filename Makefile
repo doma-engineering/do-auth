@@ -6,6 +6,8 @@ db:
 	priv/dev/create-role-phoenix.sh
 	cp priv/dev/pg_hba.conf ./pgdata/
 	/usr/lib/postgresql/12/bin/pg_ctl -D ./pgdata -l logfile restart
+	mix ecto.create
+	mix ecto.migrate
 
 hooks:
 	cp -v priv/dev/pre-commit .git/hooks/

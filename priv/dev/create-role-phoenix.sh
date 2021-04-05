@@ -20,7 +20,7 @@ Save this password to your configuration!
 For demonstration purposes, restricted local logins to password-based logins.
 New password for user ${_user} is ${_pw_root}. Saving this password to ~/.pgpass ...
 EOF
-echo -n "127.0.0.1:5432:postgres:${_user}:${_pw_root}" >> ~/.pgpass
+echo -n "127.0.0.1:5432:*:${_user}:${_pw_root}" >> ~/.pgpass
 chmod 0600 ~/.pgpass
 echo "Done!"
 

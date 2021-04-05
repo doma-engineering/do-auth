@@ -5,3 +5,4 @@ config :do_auth, DoAuth.Web,
   http: [port: 8666]
 
 import_config("test.non-secret.exs")
+import_config("test.secret.exs")
