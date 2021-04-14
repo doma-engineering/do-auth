@@ -15,7 +15,10 @@ defmodule DoAuth.MixProject do
           applications: [do_auth: :permanent],
           steps: [:assemble, :tar]
         ]
-      ]
+      ],
+      aliases: aliases(),
+      ### See https://hexdocs.pm/ecto/testing-with-ecto.html
+      elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
@@ -35,10 +38,21 @@ defmodule DoAuth.MixProject do
       {:phoenix_html, "~> 2.14"},
       {:ecto_sql, "~> 3.6"},
       {:postgrex, "~> 0.15"},
-      {:jason, "~> 1.0"},
+      {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.1"},
       {:enacl, "~> 1.1"},
-      {:typed_struct, "~> 0.2.1"}
+      {:typed_struct, "~> 0.2.1"},
+      {:dialyxir, "~> 1.1.0", only: [:dev], runtime: false}
     ]
   end
+
+  defp aliases do
+    [
+      test: ["ecto.create --quiet", "ecto.migrate", "test"]
+    ]
+  end
+
+  ### See https://hexdocs.pm/ecto/testing-with-ecto.html
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end

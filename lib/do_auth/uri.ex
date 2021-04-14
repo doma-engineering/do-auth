@@ -26,12 +26,12 @@ defmodule DoAuth.URI do
   Type capturing URL URIs.
   """
   @type url :: %{
-          protocol: String.t(),
-          fqdn: String.t(),
-          port: pos_integer() | nil,
-          path: path() | nil,
-          query: query() | nil,
-          fragment: fragment() | nil
+          required(:protocol) => String.t(),
+          required(:fqdn) => String.t(),
+          optional(:port) => pos_integer(),
+          optional(:path) => path(),
+          optional(:query) => query(),
+          optional(:fragment) => fragment()
         }
   @typedoc """
   Type capturing URN URIs.
@@ -44,10 +44,10 @@ defmodule DoAuth.URI do
   TODO: check if URNs can have slash-paths.
   """
   @type urn :: %{
-          scheme: String.t(),
-          path: path(),
-          query: query() | nil,
-          fragment: fragment() | nil
+          required(:scheme) => String.t(),
+          required(:path) => path(),
+          optional(:query) => query(),
+          optional(:fragment) => fragment()
         }
   @typedoc """
   Type capturing DID URIs.
@@ -58,11 +58,11 @@ defmodule DoAuth.URI do
   path is the tail of the hierarchy after the scheme identifier.
   """
   @type did :: %{
-          method: String.t(),
-          id: String.t(),
-          path: path() | nil,
-          query: query() | nil,
-          fragment: fragment() | nil
+          required(:method) => String.t(),
+          required(:body) => String.t(),
+          optional(:path) => path(),
+          optional(:query) => query(),
+          optional(:fragment) => fragment()
         }
 
   @doc """
@@ -142,8 +142,8 @@ defmodule DoAuth.URI do
   DID to string.
   """
   @spec did2s(did()) :: String.t()
-  def did2s(m = %{method: method, id: id}) do
-    "did:#{method}:#{id}#{p(m[:path])}#{q(m[:query])}#{f(m[:fragment])}"
+  def did2s(m = %{method: method, body: body}) do
+    "did:#{method}:#{body}#{p(m[:path])}#{q(m[:query])}#{f(m[:fragment])}"
   end
 
   @doc """
