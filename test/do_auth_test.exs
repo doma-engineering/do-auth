@@ -2,7 +2,6 @@
   defmodule DoAuthTest do
     use DoAuth.RepoCase
     use DoAuth.DBUtils
-    require Logger
 
     doctest DoAuth
 
@@ -35,6 +34,18 @@
         keypair = Crypto.derive_signing_keypair(mkey, 1)
         detached_signature = Crypto.sign(msg, keypair)
         assert(Crypto.verify(msg, detached_signature))
+      end
+    end
+
+    test "signatures are tripping" do
+      with {mkey, _} <- Crypto.main_key_init(@pass_iolist, very_weak_params()) do
+        msg = ["hello", " ", "world"]
+        keypair = Crypto.derive_signing_keypair(mkey, 1)
+        %{public: pk, signature: sig} = Crypto.sign(msg, keypair)
+
+        assert(
+          Crypto.verify(msg, %{public: pk, signature: sig |> Crypto.show() |> Crypto.read!()})
+        )
       end
     end
 

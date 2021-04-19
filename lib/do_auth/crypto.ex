@@ -164,6 +164,12 @@ defmodule DoAuth.Crypto do
   def show(x), do: Base.url_encode64(x)
 
   @doc """
+  Read from URL-safe Base 64.
+  """
+  @spec read!(String.t()) :: binary()
+  def read!(x), do: Base.url_decode64!(x)
+
+  @doc """
   Simple way to get the server keypair.
 
   TODO: audit key management practices in Phoenix and here.

@@ -36,6 +36,7 @@ defmodule DoAuth.MixProject do
       {:phoenix, "~> 1.5"},
       {:phoenix_ecto, "~> 4.2"},
       {:phoenix_html, "~> 2.14"},
+      {:tzdata, "~> 1.1"},
       {:ecto_sql, "~> 3.6"},
       {:postgrex, "~> 0.15"},
       {:jason, "~> 1.2"},

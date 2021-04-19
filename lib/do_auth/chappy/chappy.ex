@@ -78,7 +78,6 @@ defmodule DoAuth.Chappy.Chappy do
 
   use Phoenix.Controller, namespace: DoAuth.Web
   import Plug.Conn
-  # require Logger
   alias DoAuth.Chappy.ChappyView, as: View
 
   # TODO: consider making it into a configurable setting

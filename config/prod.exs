@@ -10,6 +10,8 @@ use Mix.Config
 ## It's a nice approach that we should migrate to later on, but for the time
 ## being it feels fine to just put secrets into .gitignored file
 
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
 config :do_auth, DoAuth.Web,
   url: [host: "aaa.doma.dev"],
   http: [port: 8696],

@@ -11,6 +11,10 @@ defmodule DoAuth.Proof do
     field(:timestamp, :utc_datetime)
   end
 
+  def from_sig(proving_entity, sig) do
+    changeset(%{signature: sig, verification_method: proving_entity})
+  end
+
   @spec sign_map(map(), Crypto.keypair()) :: Crypto.detached_sig()
   def sign_map(xs, kp) do
     xs |> Jason.encode!() |> Crypto.sign(kp)
@@ -20,7 +24,7 @@ defmodule DoAuth.Proof do
   @spec changeset(ingredients()) :: Changeset.t()
   def changeset(stuff) do
     result = Ecto.build_assoc(stuff[:verification_method], :proofs)
-    result |> change()
+    result |> change(stuff)
   end
 
   @spec to_map(%__MODULE__{}, [unwrapped: true] | []) :: map()
@@ -32,7 +36,7 @@ defmodule DoAuth.Proof do
       type: "libsodium2021",
       created: timestamp,
       proofPurpose: "assertionMethod",
-      verificationMethod: Entity.to_map(entity, unwrap: true),
+      verificationMethod: Entity.to_map(entity, unwrapped: true),
       # TODO: test that sig can only be represented by URLsafe base 64.
       signature: sig
     }

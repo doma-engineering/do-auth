@@ -15,6 +15,11 @@ defmodule DoAuth.Issuer do
     DBUtils.castreq(c, stuff, :url)
   end
 
+  @spec show(%DoAuth.Issuer{}) :: String.t()
+  def show(x = %__MODULE__{}) do
+    x.url
+  end
+
   # TODO: figure out which approach to simple strings is better: this or the one currently used in key.ex!!!
   def to_map(issuer = %__MODULE__{}, unwrapped: true), do: issuer.url
   def to_map(x, []), do: to_map(x)

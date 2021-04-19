@@ -85,6 +85,7 @@ defmodule DoAuth.Context do
 
   schema "contexts" do
     field(:context, :string)
+    has_many(:credentials_contexts, DoAuth.CredentialContext, foreign_key: :context_id)
   end
 
   @spec changeset(cauldron(), ingredients()) :: Changeset.t()
@@ -105,6 +106,10 @@ defmodule DoAuth.CredentialType do
 
   schema "credential_types" do
     field(:type, :string)
+
+    has_many(:credentials_credential_types, DoAuth.CredentialCredentialType,
+      foreign_key: :credential_type_id
+    )
   end
 
   @spec changeset(cauldron(), ingredients()) :: Changeset.t()

@@ -7,17 +7,29 @@ defmodule DoAuth.Entity do
   schema "entities" do
     belongs_to(:did, DoAuth.DID)
     belongs_to(:issuer, DoAuth.Issuer)
+    has_many(:proofs, DoAuth.Proof, foreign_key: :verification_method_id)
   end
 
-  def to_map(%__MODULE__{issuer_id: nil, did: did}, opts) do
-    did |> DoAuth.DID.to_map(opts)
+  def show(%__MODULE__{issuer_id: nil, did: did = %DoAuth.DID{}}) do
+    did |> Repo.preload(:key) |> DoAuth.DID.show()
   end
 
-  def to_map(%__MODULE__{did_id: nil, issuer: issuer}, opts) do
+  def show(%__MODULE__{did_id: nil, issuer: issuer = %DoAuth.Issuer{}}) do
+    issuer |> DoAuth.Issuer.show()
+  end
+
+  def to_map(%__MODULE__{issuer_id: nil, did: did = %DoAuth.DID{}}, opts) do
+    did |> Repo.preload(:key) |> DoAuth.DID.to_map(opts)
+  end
+
+  def to_map(%__MODULE__{did_id: nil, issuer: issuer = %DoAuth.Issuer{}}, opts) do
     issuer |> DoAuth.Issuer.to_map(opts)
   end
 
   def to_map(x), do: to_map(x, [])
+
+  def from_did(did), do: changeset(%{did: did})
+  def from_issuer(issuer), do: changeset(%{issuer: issuer})
 
   @doc """
   Sadly, it seems like `changeset`s aren't compatible with this use-case,

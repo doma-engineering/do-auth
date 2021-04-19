@@ -8,20 +8,20 @@ defmodule DoAuth.Repo.Migrations.InitialSchema do
 
     # Many-to-many with 'credentials'
     create table(:contexts) do
-      add :context, :string, null: false
+      add :context, :text, null: false
       add :misc, :map
     end
     create unique_index(:contexts, [:context])
 
-    # Many-to-many with 'credentials'
+    # Many-to-many with 'credentials.signature'
     create table(:credential_types) do
-      add :type, :string, null: false
+      add :type, :text, null: false
       add :misc, :map
     end
     create unique_index(:credential_types, [:type])
 
     create table(:keys) do
-      add :public_key, :string, null: false
+      add :public_key, :text, null: false
       add :purpose, :string, null: false, default: "authentication"
       add :misc, :map
     end
@@ -30,7 +30,7 @@ defmodule DoAuth.Repo.Migrations.InitialSchema do
     # Table of DIDs registered with us
     create table(:dids) do
       add :method, :string, null: false, default: "doma"
-      add :body, :string, null: false
+      add :body, :text, null: false
       add :path, :map
       add :key_id, references(:keys), null: false
       add :misc, :map
@@ -38,7 +38,7 @@ defmodule DoAuth.Repo.Migrations.InitialSchema do
     create unique_index(:dids, [:method, :body, :path])
 
     create table(:issuers) do
-      add :url, :string, null: false
+      add :url, :text, null: false
       add :misc, :map
     end
     create unique_index(:issuers, [:url])
@@ -65,23 +65,23 @@ defmodule DoAuth.Repo.Migrations.InitialSchema do
     create unique_index(:proof_types, [:type])
 
     create table(:proof_purposes) do
-      add :purpose, :string, null: false
+      add :purpose, :text, null: false
       add :misc, :map
     end
     create unique_index(:proof_purposes, [:purpose])
 
     create table(:proofs) do
       # AKA "created"
-      add :timestamp, :utc_datetime, default: fragment("NOW()"), null: false
+      add :timestamp, :utc_datetime, default: fragment("(now() AT TIME ZONE 'utc')"), null: false
       add :verification_method_id, references(:entities), null: false
-      add :signature, :string, null: false
+      add :signature, :text, null: false
     end
     create unique_index(:proofs, [:signature])
 
     create table(:credentials) do
       add :issuer_id, references(:entities), null: false
       # AKA "issuanceDate" (talk about consistent naming in W3 standards lol)
-      add :timestamp, :utc_datetime, default: fragment("NOW()"), null: false
+      add :timestamp, :utc_datetime, null: false
       add :subject_id, references(:subjects)
       add :proof_id, references(:proofs)
       add :misc, :map
@@ -91,7 +91,7 @@ defmodule DoAuth.Repo.Migrations.InitialSchema do
     # You can fold it to get the final disclosure configuration
     create table(:disclosures) do
       add :did_id, references(:dids)
-      add :timestamp, :utc_datetime, default: fragment("NOW()")
+      add :timestamp, :utc_datetime, default: fragment("(now() AT TIME ZONE 'utc')")
       # Disclosure is a credential. It has a proof attached.
       # Disclosure configuration object is under :claim mapping of the :subjects table
       add :disclosure_id, references(:credentials)
@@ -104,7 +104,7 @@ defmodule DoAuth.Repo.Migrations.InitialSchema do
 
     create table(:credentials_credential_types, primary_key: false) do
       add :credential_id, references(:credentials), primary_key: true
-      add :context_id, references(:credential_types), primary_key: true
+      add :credential_type_id, references(:credential_types), primary_key: true
     end
 
   end

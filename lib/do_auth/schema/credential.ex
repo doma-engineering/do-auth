@@ -3,7 +3,6 @@ defmodule DoAuth.Credential do
   alias DoAuth.Entity
   alias DoAuth.Subject
   alias DoAuth.Proof
-  alias DoAuth.Issuer
   alias DoAuth.Context
   alias DoAuth.Crypto
   alias DoAuth.CredentialContext, as: CC
@@ -18,6 +17,23 @@ defmodule DoAuth.Credential do
     many_to_many(:contexts, Context, join_through: CC)
     many_to_many(:types, CredentialType, join_through: CCT)
     field(:timestamp, :utc_datetime)
+  end
+
+  @doc """
+  The part of credential used to create a proof.
+  """
+  def proofless_json(cred = %__MODULE__{}) do
+    cred |> to_map(proofless: true) |> Jason.encode!()
+  end
+
+  # defp dbg(x), do: inspect(x, pretty: true)
+
+  @doc """
+  Verifies a proof of Jason.encode!'ed proofless part of a credential.
+  """
+  def verify(cred = %__MODULE__{proof: %Proof{signature: sig}}, pk) do
+    proofless = proofless_json(cred)
+    Crypto.verify(proofless, %{public: pk, signature: sig |> Crypto.read!()})
   end
 
   @spec to_map(%__MODULE__{}, [unwrapped: true] | [proofless: true] | []) :: map()
@@ -40,11 +56,13 @@ defmodule DoAuth.Credential do
     %{
       "@context": ctxs,
       type: ts,
-      issuer: Entity.to_map(entity, unwrapped: true),
+      issuer: Entity.show(entity),
       issuanceDate: timestamp,
       credentialSubject: Subject.to_map(subject, unwrapped: true)
     }
   end
+
+  # TODO: DEFINE FUNCTORIAL TOJSON???
 
   def to_map(x, []), do: to_map(x)
 

@@ -42,9 +42,6 @@ defmodule DoAuth.DID do
   # TODO: Is this enough of a reason to keep show/1?
   @spec show(%__MODULE__{}) :: String.t()
   def show(did = %__MODULE__{}) do
-    require Logger
-    Logger.debug("AAAAA #{inspect(did)}")
-
     did
     |> to_map(unwrapped: true)
     |> Map.delete(:public_key)
@@ -88,8 +85,6 @@ defmodule DoAuth.DID do
 
   @spec changeset(cauldron(), ingredients()) :: Changeset.t()
   def changeset(c, stuff) do
-    require Logger
-    Logger.debug("Inserting #{inspect(stuff)} into #{inspect(c)}")
     c |> cast(stuff, [:method, :body]) |> validate_required([:body, :key_id])
   end
 
