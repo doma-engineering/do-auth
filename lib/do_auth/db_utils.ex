@@ -85,6 +85,14 @@ defmodule DoAuth.DBUtils do
   end
 
   @doc """
+  PostgreSQL-compatible current UTC timestamp.
+  """
+  @spec now :: DateTime.t()
+  def now() do
+    DateTime.utc_now() |> DateTime.truncate(:second)
+  end
+
+  @doc """
   Standard changeset that's used rather often. Casts and requires the same fileds.
   """
   @spec castreq(map() | {Changeset.data(), Changeset.types()}, map(), atom() | list(atom) | atom) ::

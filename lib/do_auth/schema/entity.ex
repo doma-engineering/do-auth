@@ -28,8 +28,15 @@ defmodule DoAuth.Entity do
 
   def to_map(x), do: to_map(x, [])
 
+  @spec from_did(any) :: Ecto.Changeset.t()
   def from_did(did), do: changeset(%{did: did})
   def from_issuer(issuer), do: changeset(%{issuer: issuer})
+
+  def by_did_id(did_id) do
+    from(e in __MODULE__,
+      where: e.did_id == ^did_id
+    )
+  end
 
   @doc """
   Sadly, it seems like `changeset`s aren't compatible with this use-case,

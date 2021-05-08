@@ -60,20 +60,31 @@ defmodule DoAuth.DID do
   end
 
   @doc """
+  Takes just the URLSAFE Base64 encoding of a public key (as opposed to a whole
+  structure), and selects the DID derived from it.
+  """
+  @spec by_pk64(String.t()) :: Ecto.Query.t()
+  def by_pk64(pk64) do
+    from(d in __MODULE__,
+      where: d.body == ^hash(pk64)
+    )
+  end
+
+  @doc """
   Takes URLSAFE Base64 public key, inserts it and inserts a DID derived from it.
   """
-  @spec from_new_pk(String.t() | Key.mp(), mp()) :: Ecto.Multi.t()
-  def from_new_pk(pkparams = %{}, didparams = %{}) do
+  @spec from_new_pk64(String.t() | Key.mp(), mp()) :: Ecto.Multi.t()
+  def from_new_pk64(pkparams = %{}, didparams = %{}) do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(:insert_key, Key.changeset(%Key{}, pkparams), mopts())
-    |> Ecto.Multi.insert(:insert_did, &from_new_pk_changeset(didparams).(&1), mopts())
+    |> Ecto.Multi.insert(:insert_did, &from_new_pk64_changeset(didparams).(&1), mopts())
   end
 
-  def from_new_pk(<<pk::binary>>, didparams) do
-    from_new_pk(%{public_key: pk}, didparams)
+  def from_new_pk64(<<pk::binary>>, didparams) do
+    from_new_pk64(%{public_key: pk}, didparams)
   end
 
-  defp from_new_pk_changeset(didparams) do
+  defp from_new_pk64_changeset(didparams) do
     fn %{insert_key: key} ->
       %__MODULE__{key_id: key.id, body: hash(key.public_key)} |> changeset(didparams)
     end

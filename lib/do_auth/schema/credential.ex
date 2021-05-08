@@ -1,5 +1,7 @@
 defmodule DoAuth.Credential do
   use DoAuth.DBUtils, into: __MODULE__
+  alias DoAuth.DBUtils
+  alias DoAuth.DID
   alias DoAuth.Entity
   alias DoAuth.Subject
   alias DoAuth.Proof
@@ -8,7 +10,7 @@ defmodule DoAuth.Credential do
   alias DoAuth.CredentialContext, as: CC
   alias DoAuth.CredentialType
   alias DoAuth.CredentialCredentialType, as: CCT
-  # alias Ecto.Multi
+  alias Ecto.Multi
 
   schema "credentials" do
     belongs_to(:issuer, Entity)
@@ -19,9 +21,39 @@ defmodule DoAuth.Credential do
     field(:timestamp, :utc_datetime)
   end
 
+  def preload_entity(), do: [:issuer, [did: :key]]
+
+  @doc """
+  Makes a credential from a keypair serialisable map (claim).
+  """
+  def tx_from_keypair_credential!(kp = %{public: pk}, claim) do
+    {:ok, {:ok, cred}} =
+      Repo.transaction(fn ->
+        tau0 = DBUtils.now()
+        did = DID.by_pk64(pk |> Crypto.show()) |> Repo.one()
+        entity = Entity.by_did_id(did.id) |> Repo.one() |> Repo.preload(preload_entity())
+        {:ok, subject} = %{claim: claim} |> Subject.changeset() |> Repo.insert(returning: true)
+
+        proofless = %__MODULE__{
+          timestamp: tau0,
+          issuer: entity,
+          subject: subject,
+          contexts: [],
+          types: []
+        }
+
+        sig = proofless |> to_map(proofless: true) |> Proof.sign_map(kp)
+        {:ok, proof} = Proof.from_sig(entity, sig.signature |> Crypto.show()) |> Repo.insert()
+        %{proofless | proof: proof} |> Repo.insert(returning: true)
+      end)
+
+    cred
+  end
+
   @doc """
   The part of credential used to create a proof.
   """
+  @spec proofless_json(%__MODULE__{}) :: String.t()
   def proofless_json(cred = %__MODULE__{}) do
     cred |> to_map(proofless: true) |> Jason.encode!()
   end
@@ -31,6 +63,7 @@ defmodule DoAuth.Credential do
   @doc """
   Verifies a proof of Jason.encode!'ed proofless part of a credential.
   """
+  @spec verify(%__MODULE__{}, binary()) :: boolean()
   def verify(cred = %__MODULE__{proof: %Proof{signature: sig}}, pk) do
     proofless = proofless_json(cred)
     Crypto.verify(proofless, %{public: pk, signature: sig |> Crypto.read!()})

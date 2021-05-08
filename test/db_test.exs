@@ -37,11 +37,27 @@ defmodule DBTest do
 
   ############
 
+  test "Credential.keypair_and_credential_tx inserts credentials" do
+    kp = %{public: pk} = Crypto.server_keypair()
+    # Make sure that stuff's there
+    {:ok, %{insert_did: did}} = DID.from_new_pk64(pk |> Crypto.show(), %{}) |> Repo.transaction()
+    {:ok, _entity} = Entity.from_did(did) |> Repo.insert(returning: true)
+
+    cred = Credential.tx_from_keypair_credential!(kp, %{powo: "my love forever"})
+
+    require Logger
+    Logger.info("Here's a claim for y'all #{inspect(cred, pretty: true)}")
+
+    assert(Credential.verify(cred, pk))
+  end
+
+  ############
+
   test "credentials can be stored" do
     tau0 = DateTime.utc_now() |> DateTime.truncate(:second)
     # Start making issuer of credential, which is a DID-Entity
     kp = %{public: pk} = Crypto.server_keypair()
-    {:ok, %{insert_did: did}} = DID.from_new_pk(pk |> Crypto.show(), %{}) |> Repo.transaction()
+    {:ok, %{insert_did: did}} = DID.from_new_pk64(pk |> Crypto.show(), %{}) |> Repo.transaction()
     {:ok, entity} = Entity.from_did(did) |> Repo.insert(returning: true)
     # End making issuer of credential, and store it in "entity"
 
@@ -119,7 +135,7 @@ defmodule DBTest do
 
   test "DID has canonical representation" do
     %{public: pk} = Crypto.server_keypair()
-    {:ok, %{insert_did: did}} = DID.from_new_pk(pk |> Crypto.show(), %{}) |> Repo.transaction()
+    {:ok, %{insert_did: did}} = DID.from_new_pk64(pk |> Crypto.show(), %{}) |> Repo.transaction()
 
     assert(
       DID.show(did |> Repo.preload(:key)) ==
@@ -137,7 +153,7 @@ defmodule DBTest do
       |> Crypto.derive_signing_keypair(42)
       |> Map.fetch!(:public)
       |> Crypto.show()
-      |> DoAuth.DID.from_new_pk(%{})
+      |> DoAuth.DID.from_new_pk64(%{})
       |> Repo.transaction()
 
     pk =
@@ -191,7 +207,7 @@ defmodule DBTest do
       |> Crypto.derive_signing_keypair(42)
       |> Map.fetch!(:public)
       |> Crypto.show()
-      |> DoAuth.DID.from_new_pk(%{})
+      |> DoAuth.DID.from_new_pk64(%{})
       |> Repo.transaction()
 
     # Casually testing select btw
