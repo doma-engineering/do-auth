@@ -22,6 +22,7 @@ defmodule DoAuth.Key do
     has_many(:dids, DID)
   end
 
+  @spec show(%DoAuth.Key{}) :: String.t()
   def show(%__MODULE__{public_key: pk}), do: DoAuth.Crypto.show(pk)
 
   @doc """

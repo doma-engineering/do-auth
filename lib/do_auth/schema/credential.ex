@@ -10,7 +10,7 @@ defmodule DoAuth.Credential do
   alias DoAuth.CredentialContext, as: CC
   alias DoAuth.CredentialType
   alias DoAuth.CredentialCredentialType, as: CCT
-  alias Ecto.Multi
+  # alias Ecto.Multi
 
   schema "credentials" do
     belongs_to(:issuer, Entity)
@@ -21,11 +21,14 @@ defmodule DoAuth.Credential do
     field(:timestamp, :utc_datetime)
   end
 
+  @spec preload_entity :: [:issuer | [{:did, :key}, ...], ...]
   def preload_entity(), do: [:issuer, [did: :key]]
 
   @doc """
   Makes a credential from a keypair serialisable map (claim).
   """
+  @spec tx_from_keypair_credential!(%{:public => binary(), :secret => binary()}, map()) ::
+          %__MODULE__{}
   def tx_from_keypair_credential!(kp = %{public: pk}, claim) do
     {:ok, {:ok, cred}} =
       Repo.transaction(fn ->

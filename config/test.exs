@@ -10,3 +10,5 @@ config :do_auth, DoAuth.Repo, database: "do_auth_test", pool: Ecto.Adapters.SQL.
 
 import_config("test.non-secret.exs")
 import_config("test.secret.exs")
+
+config :logger, level: :warn

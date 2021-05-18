@@ -37,6 +37,7 @@ defmodule DoAuth.DID do
   end
 
   def to_map(x, []), do: to_map(x)
+
   def to_map(x), do: %{did: to_map(x, unwrapped: true)}
 
   # TODO: Is this enough of a reason to keep show/1?
@@ -49,10 +50,14 @@ defmodule DoAuth.DID do
   end
 
   @doc """
-  Takes an existing URLSAFE Base64 public key and inserts a new DID derived from it.
+  Associates a DoAuth.Key structure with a DID, :body of which is the hash of
+  field :public_key of DoAuth.Key, which is urlsafe-base64-encoded digest of the
+  public key.
   """
-  @spec from_pk(%DoAuth.Key{}, mp()) :: Changeset.t()
-  def from_pk(pk = %Key{}, didparams = %{}) do
+  @spec from_key(%DoAuth.Key{}, map()) :: Changeset.t()
+  def from_key(x, y \\ %{method: "doma"})
+
+  def from_key(pk = %Key{}, didparams = %{}) do
     result = Ecto.build_assoc(pk, :dids)
 
     result
