@@ -38,20 +38,20 @@ defmodule DBTest do
 
   ############
 
-  test "Credential.keypair_and_credential_tx inserts credentials" do
-    _dids = Repo.all(DID)
-    kp = %{public: pk} = Crypto.server_keypair()
-    _dids = Repo.all(DID)
-    # Make sure that stuff's there
-    {:ok, %{insert_did: did}} = DID.from_new_pk64(pk |> Crypto.show(), %{}) |> Repo.transaction()
-    {:ok, _entity} = Entity.from_did(did) |> Repo.insert(returning: true)
+  test "Credential.tx_from_keypair_credential! inserts credentials" do
+    Repo.transaction(fn ->
+      kp = %{public: pk} = Crypto.server_keypair()
+      # Make sure that stuff's there
+      did = sin_did(pk)
+      {:ok, _entity} = Entity.from_did(did) |> Repo.insert(returning: true)
 
-    cred = Credential.tx_from_keypair_credential!(kp, %{powo: "my love forever"})
+      cred = Credential.tx_from_keypair_credential!(kp, %{powo: "my love forever"})
 
-    require Logger
-    Logger.info("Here's a claim for y'all #{inspect(cred, pretty: true)}")
+      require Logger
+      Logger.info("Here's a claim for y'all #{inspect(cred, pretty: true)}")
 
-    assert(Credential.verify(cred, pk))
+      assert(Credential.verify(cred, pk))
+    end)
   end
 
   ############
@@ -62,22 +62,27 @@ defmodule DBTest do
     assert(true)
   end
 
+  test "Mission-critical TOFU data is populated" do
+    %{public: pk} = Crypto.server_keypair()
+    pk64 = pk |> Crypto.show()
+    DoAuth.Persistence.populate_do()
+    # TODO: Make API for this!
+    subject = from(c in Subject, where: c.claim["me"] == ^pk64) |> Repo.one()
+
+    cred =
+      from(c in Credential, where: c.subject_id == ^subject.id)
+      |> Repo.one()
+      |> Repo.preload(Credential.preload_credential())
+
+    assert(Credential.verify(cred, pk))
+  end
+
   ############
 
   test "DID has canonical representation" do
     %{public: pk} = Crypto.server_keypair()
 
-    did =
-      case DID.by_pk64(pk |> Crypto.show()) |> Repo.all() do
-        [x] ->
-          x
-
-        _ ->
-          {:ok, %{insert_did: x}} =
-            DID.from_new_pk64(pk |> Crypto.show(), %{}) |> Repo.transaction()
-
-          x
-      end
+    did = sin_did(pk)
 
     assert(
       DID.show(did |> Repo.preload(:key)) ==
@@ -175,5 +180,18 @@ defmodule DBTest do
 
     assert(subj.claim.note == "huge success")
     assert(!Map.get(subj.claim, :foo))
+  end
+
+  defp sin_did(pk) do
+    case DID.by_pk64(pk |> Crypto.show()) |> Repo.all() do
+      [x] ->
+        x
+
+      _ ->
+        {:ok, %{insert_did: x}} =
+          DID.from_new_pk64(pk |> Crypto.show(), %{}) |> Repo.transaction()
+
+        x
+    end
   end
 end

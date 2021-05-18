@@ -11,6 +11,7 @@ defmodule DoAuth.Credential do
   alias DoAuth.CredentialType
   alias DoAuth.CredentialCredentialType, as: CCT
   # alias Ecto.Multi
+  require Logger
 
   schema "credentials" do
     belongs_to(:issuer, Entity)
@@ -23,6 +24,12 @@ defmodule DoAuth.Credential do
 
   @spec preload_entity :: [:issuer | [{:did, :key}, ...], ...]
   def preload_entity(), do: [:issuer, [did: :key]]
+
+  @spec preload_credential :: [
+          :contexts | :issuer | :proof | :subject | :types | [{:did, :key}, ...],
+          ...
+        ]
+  def preload_credential(), do: [[issuer: [did: :key]], :contexts, :proof, :subject, :types]
 
   @doc """
   Makes a credential from a keypair serialisable map (claim).

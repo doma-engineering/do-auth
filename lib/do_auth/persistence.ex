@@ -11,7 +11,7 @@ defmodule DoAuth.Persistence do
   alias DoAuth.Crypto
 
   # Sadly, there doesn't seem to be a way to subscribe to Repo initialization
-  # end, so we ad-hoc with Task
+  # end, so we ad-hoc with transient spawn_link
   @max_retries 11
 
   def init(_) do
@@ -28,13 +28,17 @@ defmodule DoAuth.Persistence do
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(opts), do: Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
 
-  defp populate_do(y \\ 0)
+  @doc """
+  Exposed for testing.
+  """
+  @spec populate_do(any) :: any
+  def populate_do(retries \\ 0)
 
-  defp populate_do(@max_retries) do
+  def populate_do(@max_retries) do
     raise("Populate has reached maximum retires reached while waiting for Repo")
   end
 
-  defp populate_do(retries) do
+  def populate_do(retries) do
     if GenServer.whereis(Repo) do
       Repo.transaction(fn ->
         kp = DoAuth.Crypto.server_keypair()
@@ -102,23 +106,18 @@ defmodule DoAuth.Persistence do
     end
   end
 
-  if Mix.env() == :test do
-    @spec populate :: {:ok, pid()}
-    def populate() do
-      {:ok, spawn_link(fn -> :ok end)}
-    end
-  else
+  if Mix.env() != :test do
     @spec populate :: {:ok, pid()}
     def populate() do
       {:ok,
        spawn_link(fn ->
-         Task.async(fn -> populate_do() end)
-         |> Task.await()
+         populate_do()
        end)}
     end
-  end
-
-  def nowarn() do
-    populate_do()
+  else
+    @spec populate :: {:ok, pid()}
+    def populate() do
+      {:ok, spawn_link(fn -> :ok end)}
+    end
   end
 end
