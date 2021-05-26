@@ -26,12 +26,14 @@ defmodule DoAuth.Web.Router do
   scope "/", DoAuth do
     pipe_through(:browser)
     get("/", ZeroVC.ZeroVC, :index)
+    get("/demo", ZeroVC.ZeroVC, :demo)
     get("/hello/world", ZeroVC.ZeroVC, :cheer)
   end
 
   scope "/chappy", DoAuth do
     pipe_through(:chappy)
     get("/", Chappy.Chappy, :the_endpoint)
+    get("/tofu", Chappy.Tofu, :me)
   end
 
   scope "/api", DoAuth do

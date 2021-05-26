@@ -79,6 +79,24 @@ defmodule DoAuth.Crypto do
   """
   @type detached_sig :: %{public: binary(), signature: binary()}
 
+  @typedoc """
+  Only accept atoms as keys of canonicalisable entities.
+  """
+  @type canonicalisable_key :: atom()
+
+  @typedoc """
+  Only accept atoms, strings and numbers as values of canonocalisable entities.
+  """
+  @type canonicalisable_value ::
+          atom()
+          | String.t()
+          | number()
+          | list(canonicalisable_value())
+          | %{canonicalisable_key() => canonicalisable_value()}
+
+  @type canonicalised_value ::
+          String.t() | number() | list(list(String.t() | canonicalised_value()))
+
   @doc """
   Generate slip and main key from password with given parameters.
   This function is used directly for testing and flexibility, but shouldn't be normally used.
@@ -122,7 +140,7 @@ defmodule DoAuth.Crypto do
   """
   @spec sign(binary() | iolist(), keypair()) :: detached_sig()
   def sign(msg, %{secret: sk, public: pk}) do
-    %{public: pk, signature: C.sign(msg, sk)}
+    %{public: pk, signature: C.sign_detached(msg, sk)}
   end
 
   @doc """
@@ -168,6 +186,55 @@ defmodule DoAuth.Crypto do
   """
   @spec read!(String.t()) :: binary()
   def read!(x), do: Base.url_decode64!(x)
+
+  @doc """
+    Preventing canonicalization bugs by ordering maps lexicographically into a
+    list. NB! This makes it so that list representations of JSON objects are
+    also accepted by verifiers, but it's OK, since no data can seemingly be
+    falsified like this.
+
+    TODO: Audit this function really well, both here and in JavaScript reference
+    implementation, since a bug here can sabotage the security guarantees of the
+    cryptographic system.
+  """
+  @spec canonicalise_term(canonicalisable_value()) :: canonicalised_value()
+
+  def canonicalise_term(v) when is_binary(v) or is_number(v) do
+    v
+  end
+
+  def canonicalise_term(v) when is_atom(v) do
+    Atom.to_string(v)
+  end
+
+  def canonicalise_term(tau = %DateTime{}) do
+    DateTime.to_iso8601(tau)
+  end
+
+  def canonicalise_term(xs = []) do
+    Enum.map(xs, fn v -> canonicalise_term(v) end)
+  end
+
+  def canonicalise_term(kv = %{}) do
+    canonicalise_term_do(Map.keys(kv) |> Enum.sort(), kv, []) |> Enum.reverse()
+  end
+
+  def canonicalise_term(xs) when is_tuple(xs) do
+    canonicalise_term(Tuple.to_list(xs))
+  end
+
+  defp canonicalise_term_do([], _, acc), do: acc
+
+  defp canonicalise_term_do([x | rest], kv, acc) when is_atom(x) or is_binary(x) do
+    x_canonicalised =
+      if is_atom(x) do
+        Atom.to_string(x)
+      else
+        x
+      end
+
+    canonicalise_term_do(rest, kv, [[x_canonicalised, canonicalise_term(kv[x])] | acc])
+  end
 
   @doc """
   Simple way to get the server keypair.

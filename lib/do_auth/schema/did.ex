@@ -49,6 +49,31 @@ defmodule DoAuth.DID do
     |> DoAuth.URI.did2s()
   end
 
+  @spec read(binary | URI.t()) :: %DoAuth.DID{
+          __meta__: Ecto.Schema.Metadata.t(),
+          body: binary,
+          entity: Ecto.Association.NotLoaded.t(),
+          id: nil,
+          key: Ecto.Association.NotLoaded.t(),
+          key_id: nil,
+          method: binary,
+          misc: %{},
+          path: <<_::8, _::_*8>>
+        }
+  def read(x) do
+    %URI{scheme: "did", path: methodBodyPath, query: _q, fragment: _frag} = URI.parse(x)
+    [method, bodyPath] = methodBodyPath |> String.split(":")
+    [body | path] = bodyPath |> String.split("/")
+
+    path =
+      case path do
+        [] -> ""
+        _ -> "/" <> Enum.join(path, "/")
+      end
+
+    %__MODULE__{method: method, body: body, path: path, misc: %{}}
+  end
+
   @doc """
   Associates a DoAuth.Key structure with a DID, :body of which is the hash of
   field :public_key of DoAuth.Key, which is urlsafe-base64-encoded digest of the

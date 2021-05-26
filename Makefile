@@ -12,4 +12,7 @@ db:
 hooks:
 	cp -v priv/dev/pre-commit .git/hooks/
 
+sodiumjs:
+	curl https://raw.githubusercontent.com/jedisct1/libsodium.js/master/dist/browsers/sodium.js > priv/static/js/sodium.js
+
 dev: hooks db

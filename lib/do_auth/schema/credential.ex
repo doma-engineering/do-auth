@@ -1,8 +1,24 @@
 defmodule DoAuth.Credential do
+  @moduledoc """
+  Credential.
+
+  Canonical field orders:
+  TODO: change elixir's "issuer" to a rightful "entity"
+
+  "@context" /        contexts
+  id /                -
+  type /              types
+  issuer /            issuer
+  issuanceDate /      timestamp
+  credentialSubject / subject
+  proof /             proof
+  """
+
   use DoAuth.DBUtils, into: __MODULE__
   alias DoAuth.DBUtils
   alias DoAuth.DID
   alias DoAuth.Entity
+  alias DoAuth.Key
   alias DoAuth.Subject
   alias DoAuth.Proof
   alias DoAuth.Context
@@ -11,7 +27,6 @@ defmodule DoAuth.Credential do
   alias DoAuth.CredentialType
   alias DoAuth.CredentialCredentialType, as: CCT
   # alias Ecto.Multi
-  require Logger
 
   schema "credentials" do
     belongs_to(:issuer, Entity)
@@ -22,37 +37,136 @@ defmodule DoAuth.Credential do
     field(:timestamp, :utc_datetime)
   end
 
-  @spec preload_entity :: [:issuer | [{:did, :key}, ...], ...]
+  def tx_import_tofu!(cred_map) do
+    {:ok, cred} =
+      Repo.transaction(fn ->
+        pk64 = cred_map.credentialSubject.me
+
+        pk_stored =
+          case pk64 |> Key.by_pk() |> Repo.all() do
+            [] ->
+              Key.changeset(%{public_key: pk64}) |> Repo.insert!()
+
+            [x = %DoAuth.Key{}] ->
+              x
+          end
+
+        did_stored =
+          case DoAuth.DID.by_pk64(pk64) |> Repo.all() do
+            [] ->
+              DoAuth.DID.from_key(pk_stored) |> Repo.insert!()
+
+            [x = %DoAuth.DID{}] ->
+              x
+          end
+
+        _entity_stored =
+          case DoAuth.Entity.by_did_id(did_stored.id) |> Repo.all() do
+            [] ->
+              DoAuth.Entity.from_did(did_stored) |> Repo.insert!()
+
+            [x = %DoAuth.Entity{}] ->
+              x
+          end
+
+        {:ok, tau0, 0} = cred_map.issuanceDate |> DateTime.from_iso8601()
+
+        credential =
+          case from(c in DoAuth.Subject,
+                 where: fragment(~s(? ->> 'me' = ?), c.claim, ^pk64)
+               )
+               |> Repo.all() do
+            [] ->
+              tx_from_keypair_credential!(
+                %{
+                  public: Crypto.read!(pk64),
+                  signature: cred_map.proof.signature |> Crypto.read!(),
+                  timestamp: tau0
+                },
+                %{me: pk64}
+              )
+
+            [x = %DoAuth.Subject{}] ->
+              from(c in DoAuth.Credential, where: c.subject_id == ^x.id) |> Repo.one!()
+          end
+
+        credential |> Repo.preload(preload_credential())
+      end)
+
+    cred
+  end
+
   def preload_entity(), do: [:issuer, [did: :key]]
 
-  @spec preload_credential :: [
-          :contexts | :issuer | :proof | :subject | :types | [{:did, :key}, ...],
-          ...
-        ]
-  def preload_credential(), do: [[issuer: [did: :key]], :contexts, :proof, :subject, :types]
+  def preload_credential(),
+    do: [
+      [issuer: [did: [:entity, :key]]],
+      :contexts,
+      [proof: [verification_method: :did]],
+      :subject,
+      :types
+    ]
+
+  @spec by_subject(%Subject{}) :: %__MODULE__{}
+  @doc """
+  Get credential by subject.
+  """
+  def by_subject(subj) do
+    from(c in __MODULE__, where: c.subject_id == ^subj.id)
+    |> Repo.one()
+    |> Repo.preload(preload_credential())
+  end
 
   @doc """
   Makes a credential from a keypair serialisable map (claim).
   """
-  @spec tx_from_keypair_credential!(%{:public => binary(), :secret => binary()}, map()) ::
+  @spec tx_from_keypair_credential!(
+          %{
+            :public => binary(),
+            optional(:secret) => binary(),
+            optional(:signature) => binary(),
+            # TODO: Recap how timestamps work in Elixir
+            optional(:timestamp) => any()
+          },
+          map()
+        ) ::
           %__MODULE__{}
   def tx_from_keypair_credential!(kp = %{public: pk}, claim) do
     {:ok, {:ok, cred}} =
       Repo.transaction(fn ->
-        tau0 = DBUtils.now()
+        tau0 =
+          unless Map.get(kp, :timestamp, false) do
+            DBUtils.now()
+          else
+            kp.timestamp
+          end
+
         did = DID.by_pk64(pk |> Crypto.show()) |> Repo.one()
         entity = Entity.by_did_id(did.id) |> Repo.one() |> Repo.preload(preload_entity())
         {:ok, subject} = %{claim: claim} |> Subject.changeset() |> Repo.insert(returning: true)
 
+        # TODO: Make it clear that ID is not known at this stage and isn't
+        # verified, which opens up an option for phishing and for shitty
+        # implementations that are tricked by an unverified ID in a verified
+        # credential to fetch a bogus one and treat it as correct.
         proofless = %__MODULE__{
-          timestamp: tau0,
-          issuer: entity,
-          subject: subject,
           contexts: [],
-          types: []
+          types: [],
+          issuer: entity,
+          timestamp: tau0,
+          subject: subject
         }
 
-        sig = proofless |> to_map(proofless: true) |> Proof.sign_map(kp)
+        sig =
+          unless Map.get(kp, :signature, false) do
+            proofless
+            |> to_map(proofless: true)
+            |> Crypto.canonicalise_term()
+            |> Proof.sign_map(kp)
+          else
+            %{signature: kp.signature}
+          end
+
         {:ok, proof} = Proof.from_sig(entity, sig.signature |> Crypto.show()) |> Repo.insert()
         %{proofless | proof: proof} |> Repo.insert(returning: true)
       end)
@@ -65,10 +179,9 @@ defmodule DoAuth.Credential do
   """
   @spec proofless_json(%__MODULE__{}) :: String.t()
   def proofless_json(cred = %__MODULE__{}) do
-    cred |> to_map(proofless: true) |> Jason.encode!()
+    cred1 = cred |> to_map(proofless: true)
+    cred1 |> Crypto.canonicalise_term() |> Jason.encode!()
   end
-
-  # defp dbg(x), do: inspect(x, pretty: true)
 
   @doc """
   Verifies a proof of Jason.encode!'ed proofless part of a credential.
@@ -79,6 +192,38 @@ defmodule DoAuth.Credential do
     Crypto.verify(proofless, %{public: pk, signature: sig |> Crypto.read!()})
   end
 
+  @doc """
+  Verifies a proof of Jason.encode!'ed proofless part of a credential, given an URLSAFE BASE64 ENCODED public key.
+  """
+  @spec verify64(%__MODULE__{}, binary()) :: boolean()
+  def verify64(cred, pk64) do
+    verify(cred, pk64 |> Crypto.read!())
+  end
+
+  @doc """
+  Make a %Credential{} with canonical order of fields.
+  """
+  def from_map(
+        _cred = %{
+          "@context": ctx,
+          credentialSubject: subj,
+          issuanceDate: tau0,
+          issuer: issuer,
+          proof: proof,
+          type: type
+        }
+      ) do
+    # [x] This complies with the canonical field orders
+    %__MODULE__{
+      contexts: ctx,
+      types: type,
+      issuer: Entity.read(issuer),
+      timestamp: tau0,
+      subject: subj,
+      proof: Proof.from_map(proof)
+    }
+  end
+
   @spec to_map(%__MODULE__{}, [unwrapped: true] | [proofless: true] | []) :: map()
   def to_map(cred = %__MODULE__{proof: proof}, unwrapped: true) do
     to_map(cred, proofless: true)
@@ -87,7 +232,7 @@ defmodule DoAuth.Credential do
   end
 
   def to_map(
-        %__MODULE__{
+        _cred = %__MODULE__{
           contexts: ctxs,
           types: ts,
           issuer: entity,
@@ -112,6 +257,7 @@ defmodule DoAuth.Credential do
   @spec to_map(%__MODULE__{}) :: map()
   def to_map(x = %__MODULE__{}), do: %{credential: to_map(x, unwrapped: true)}
 
+  # TODO: nicer ids for credentials
   @spec to_url(%__MODULE__{}) :: String.t()
   def to_url(cred = %__MODULE__{}),
     do: "unavailable/credentials/#{Crypto.salted_hash(cred |> :erlang.term_to_binary())}"
@@ -148,6 +294,8 @@ defmodule DoAuth.Credential do
   defp tag_once(cred, mk_changeset) do
     fn tag, _acc ->
       mk_changeset.(cred, tag)
+      # TODO: This is something really shady and really deep. We probably should
+      # do something about this mess.
       |> Repo.insert()
       |> to_cont()
     end

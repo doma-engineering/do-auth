@@ -47,9 +47,6 @@ defmodule DBTest do
 
       cred = Credential.tx_from_keypair_credential!(kp, %{powo: "my love forever"})
 
-      require Logger
-      Logger.info("Here's a claim for y'all #{inspect(cred, pretty: true)}")
-
       assert(Credential.verify(cred, pk))
     end)
   end
@@ -66,14 +63,7 @@ defmodule DBTest do
     %{public: pk} = Crypto.server_keypair()
     pk64 = pk |> Crypto.show()
     DoAuth.Persistence.populate_do()
-    # TODO: Make API for this!
-    subject = from(c in Subject, where: c.claim["me"] == ^pk64) |> Repo.one()
-
-    cred =
-      from(c in Credential, where: c.subject_id == ^subject.id)
-      |> Repo.one()
-      |> Repo.preload(Credential.preload_credential())
-
+    cred = Subject.by_claim_me(pk64) |> Credential.by_subject()
     assert(Credential.verify(cred, pk))
   end
 

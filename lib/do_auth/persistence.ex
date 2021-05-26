@@ -5,7 +5,6 @@ defmodule DoAuth.Persistence do
   """
 
   use Supervisor
-  require Logger
   import Ecto.Query
   alias DoAuth.Repo
   alias DoAuth.Crypto
@@ -15,8 +14,6 @@ defmodule DoAuth.Persistence do
   @max_retries 11
 
   def init(_) do
-    Logger.debug("Initialising #{inspect(__MODULE__)}")
-
     children = [
       DoAuth.Repo,
       %{id: DoAuth.Persistence.Populate, start: {__MODULE__, :populate, []}, restart: :transient}
@@ -32,16 +29,16 @@ defmodule DoAuth.Persistence do
   Exposed for testing.
   """
   @spec populate_do(any) :: any
-  def populate_do(retries \\ 0)
+  def populate_do(kp \\ Crypto.server_keypair(), retries \\ 0)
 
-  def populate_do(@max_retries) do
+  def populate_do(_, @max_retries) do
     raise("Populate has reached maximum retires reached while waiting for Repo")
   end
 
-  def populate_do(retries) do
+  def populate_do(kp, retries) do
     if GenServer.whereis(Repo) do
       Repo.transaction(fn ->
-        kp = DoAuth.Crypto.server_keypair()
+        # kp = DoAuth.Crypto.server_keypair()
         pk64 = kp.public |> Crypto.show()
 
         impossibility =

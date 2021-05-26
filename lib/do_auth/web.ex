@@ -22,7 +22,7 @@ defmodule DoAuth.Web do
     at: "/",
     from: {:do_auth, "priv/static"},
     gzip: false,
-    only: ~w(css fonts images js favicon.ico robots.txt)
+    only: ~w(css fonts images js demo.html favicon.ico robots.txt)
   )
 
   # TODO: Figure out how to move this stuff to Chappy.Chappy
@@ -72,6 +72,9 @@ defmodule DoAuth.Web do
       use Phoenix.View,
         root: "lib/do_auth/web/templates",
         namespace: DoAuth.Web
+
+      import Phoenix.Controller,
+        only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
 
       use Phoenix.HTML
     end

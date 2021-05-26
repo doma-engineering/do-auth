@@ -10,8 +10,19 @@ defmodule DoAuth.Entity do
     has_many(:proofs, DoAuth.Proof, foreign_key: :verification_method_id)
   end
 
+  def read(x) do
+    read_do(URI.parse(x))
+  end
+
+  defp read_do(%URI{scheme: "did", path: p}) do
+    %__MODULE__{did: DoAuth.DID.read("did:" <> p)}
+  end
+
+  defp read_do(x), do: %__MODULE__{issuer: x}
+
   def show(%__MODULE__{issuer_id: nil, did: did = %DoAuth.DID{}}) do
-    did |> Repo.preload(:key) |> DoAuth.DID.show()
+    did = Repo.preload(did, :key)
+    DoAuth.DID.show(did)
   end
 
   def show(%__MODULE__{did_id: nil, issuer: issuer = %DoAuth.Issuer{}}) do

@@ -9,6 +9,7 @@ defmodule DoAuth.ZeroVC.ZeroVC do
   use Phoenix.Controller, namespace: DoAuth.Web
   # ^ be explicit to separate the modules easier later on
   import Plug.Conn
+  alias DoAuth.ZeroVC.ZeroVCView, as: View
 
   def init(x), do: x
 
@@ -23,5 +24,10 @@ defmodule DoAuth.ZeroVC.ZeroVC do
     msg = get_session(c, :hello)
     c = put_session(c, :hello, msg <> msg)
     send_resp(c, 200, msg)
+  end
+
+  @spec demo(Plug.Conn.t(), any) :: Plug.Conn.t()
+  def demo(c, _) do
+    c |> put_view(View) |> render("demo.html", %{})
   end
 end
