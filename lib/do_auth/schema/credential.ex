@@ -35,6 +35,7 @@ defmodule DoAuth.Credential do
     many_to_many(:contexts, Context, join_through: CC)
     many_to_many(:types, CredentialType, join_through: CCT)
     field(:timestamp, :utc_datetime)
+    field(:misc, :map)
   end
 
   def tx_import_tofu!(cred_map) do
@@ -126,12 +127,18 @@ defmodule DoAuth.Credential do
             optional(:secret) => binary(),
             optional(:signature) => binary(),
             # TODO: Recap how timestamps work in Elixir
-            optional(:timestamp) => any()
+            optional(:timestamp) => any(),
+            optional(:misc) => map()
           },
           map()
         ) ::
           %__MODULE__{}
-  def tx_from_keypair_credential!(kp = %{public: pk}, claim) do
+  def tx_from_keypair_credential!(x, y, z \\ %{})
+
+  def tx_from_keypair_credential!(kp = %{public: pk}, claim, misc) do
+    # require Logger
+    # Logger.warn()
+
     {:ok, {:ok, cred}} =
       Repo.transaction(fn ->
         tau0 =
@@ -149,12 +156,16 @@ defmodule DoAuth.Credential do
         # verified, which opens up an option for phishing and for shitty
         # implementations that are tricked by an unverified ID in a verified
         # credential to fetch a bogus one and treat it as correct.
+        #
+        # TODO: Make it also clear that misc.id will be used instead of auto
+        # derived ID if provided
         proofless = %__MODULE__{
           contexts: [],
           types: [],
           issuer: entity,
           timestamp: tau0,
-          subject: subject
+          subject: subject,
+          misc: misc
         }
 
         sig =
@@ -228,7 +239,7 @@ defmodule DoAuth.Credential do
   def to_map(cred = %__MODULE__{proof: proof}, unwrapped: true) do
     to_map(cred, proofless: true)
     |> Map.put_new(:proof, Proof.to_map(proof, unwrapped: true))
-    |> Map.put_new(:id, to_url(cred))
+    |> Map.put_new(:id, mk_cred_id(cred))
   end
 
   def to_map(
@@ -257,10 +268,32 @@ defmodule DoAuth.Credential do
   @spec to_map(%__MODULE__{}) :: map()
   def to_map(x = %__MODULE__{}), do: %{credential: to_map(x, unwrapped: true)}
 
-  # TODO: nicer ids for credentials
-  @spec to_url(%__MODULE__{}) :: String.t()
-  def to_url(cred = %__MODULE__{}),
-    do: "unavailable/credentials/#{Crypto.salted_hash(cred |> :erlang.term_to_binary())}"
+  @doc """
+  We have decided against using full URLs for credentials like shown in VC data
+  model standard. Not the last reason is that in some high availability
+  settings, replicant servers may be accessible through fqdn fallback and not be
+  behind the same load balancer.
+
+  Normally, IDs of credentials are just salted hashes of proofless JSON versions
+  of credentials. This is done to achieve addressibility without predictability
+  of hashes. Indeed, if we would use bland (unsalted) hashes, Malice who forgot
+  her friend's Alice's birth date, would be able to, knowing Alice's DID and the
+  time when she got her registration, enumerate proofless JSONs, eventually
+  finding the information.
+  """
+  @spec mk_cred_id(%__MODULE__{}) :: String.t()
+  def mk_cred_id(x, y \\ [])
+
+  def mk_cred_id(cred = %__MODULE__{}, cloaked: false),
+    do:
+      Map.get(
+        cred.misc,
+        "location",
+        "/credentials/#{Crypto.salted_hash(cred |> :erlang.term_to_binary())}"
+      )
+
+  def mk_cred_id(cred = %__MODULE__{}, _),
+    do: Map.get(cred.misc, "location", "/credential/cloaked")
 
   # TODO: test
   @spec insert(%Entity{}, %Subject{}, %Proof{}, list(%Context{}), list(%CredentialType{})) ::

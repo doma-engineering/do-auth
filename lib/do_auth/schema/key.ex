@@ -33,6 +33,19 @@ defmodule DoAuth.Key do
     from(k in __MODULE__, where: k.public_key == ^pk)
   end
 
+  @doc """
+  Query that retrieves a %Key{} by the corresponding DID.
+  """
+  @spec by_did(%DID{}) :: Ecto.Query.t()
+  def by_did(did) do
+    from(d in DID,
+      join: k in __MODULE__,
+      on: [id: d.key_id],
+      where: d.body == ^did.body,
+      select: k
+    )
+  end
+
   @spec changeset(cauldron(), ingredients()) :: Changeset.t()
   def changeset(c, stuff) do
     c |> cast(stuff, [:public_key, :misc, :purpose]) |> validate_required(:public_key)
