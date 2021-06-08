@@ -17,8 +17,6 @@ defmodule InviteTest do
     did = kp.public |> Crypto.show() |> DID.by_pk64() |> Repo.one!() |> Repo.preload(:key)
     granted = Invite.grant(did, 1)
     granted_map = granted |> Credential.to_map(unwrapped: true)
-    # require Logger
-    # Logger.warn("#{inspect(granted_map)}")
     refute("/credential/cloaked" == granted_map.id)
     {mkey, _} = Crypto.main_key_init("password123", DoAuthTest.very_weak_params())
     new_kp = mkey |> Crypto.derive_signing_keypair(42)

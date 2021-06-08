@@ -136,9 +136,6 @@ defmodule DoAuth.Credential do
   def tx_from_keypair_credential!(x, y, z \\ %{})
 
   def tx_from_keypair_credential!(kp = %{public: pk}, claim, misc) do
-    # require Logger
-    # Logger.warn()
-
     {:ok, {:ok, cred}} =
       Repo.transaction(fn ->
         tau0 =
@@ -165,13 +162,15 @@ defmodule DoAuth.Credential do
           issuer: entity,
           timestamp: tau0,
           subject: subject,
+          # misc shouldn't end up in the credential
           misc: misc
         }
 
+        proofless_map = proofless |> to_map(proofless: true)
+
         sig =
           unless Map.get(kp, :signature, false) do
-            proofless
-            |> to_map(proofless: true)
+            proofless_map
             |> Crypto.canonicalise_term()
             |> Proof.sign_map(kp)
           else
@@ -192,6 +191,29 @@ defmodule DoAuth.Credential do
   def proofless_json(cred = %__MODULE__{}) do
     cred1 = cred |> to_map(proofless: true)
     cred1 |> Crypto.canonicalise_term() |> Jason.encode!()
+  end
+
+  @doc """
+  Verifies a proof of Jason.encode!'ed proofless part of a credential, received
+  from a third party, thus being agnostic to DB IDs.
+  """
+  @spec verify_map(map(), binary()) :: boolean()
+  def verify_map(cred_map = %{proof: %{signature: sig}}, pk) do
+    proofless = map_to_proofless_json(cred_map)
+    Crypto.verify(proofless, %{public: pk, signature: sig |> Crypto.read!()})
+  end
+
+  # TODO: Typespec tightly
+  def map_to_proofless_json(cred_map) do
+    %{
+      "@context": cred_map[:"@context"],
+      type: cred_map[:type],
+      issuer: cred_map[:issuer],
+      issuanceDate: cred_map[:issuanceDate],
+      credentialSubject: cred_map[:credentialSubject]
+    }
+    |> Crypto.canonicalise_term()
+    |> Jason.encode!()
   end
 
   @doc """
@@ -292,8 +314,13 @@ defmodule DoAuth.Credential do
         "/credentials/#{Crypto.salted_hash(cred |> :erlang.term_to_binary())}"
       )
 
-  def mk_cred_id(cred = %__MODULE__{}, _),
-    do: Map.get(cred.misc, "location", "/credential/cloaked")
+  def mk_cred_id(cred = %__MODULE__{}, _) do
+    if cred.misc do
+      Map.get(cred.misc, "location", "/credential/cloaked")
+    else
+      "/credential/cloaked"
+    end
+  end
 
   # TODO: test
   @spec insert(%Entity{}, %Subject{}, %Proof{}, list(%Context{}), list(%CredentialType{})) ::

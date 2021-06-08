@@ -103,7 +103,7 @@ defmodule DoAuth.DID do
   @doc """
   Takes URLSAFE Base64 public key, inserts it and inserts a DID derived from it.
   """
-  @spec from_new_pk64(String.t() | Key.mp(), mp()) :: Ecto.Multi.t()
+  @spec from_new_pk64(String.t() | Key.mp(), any()) :: Ecto.Multi.t()
   def from_new_pk64(pkparams = %{}, didparams = %{}) do
     Ecto.Multi.new()
     |> Ecto.Multi.insert(:insert_key, Key.changeset(%Key{}, pkparams), mopts())

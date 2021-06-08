@@ -47,6 +47,63 @@ defmodule DoAuth.Invite do
     })
   end
 
+  defp fulfill_zero_map(pk64, invite) do
+    did_stored = DID.by_pk64(pk64) |> Repo.one!() |> Repo.preload(:key)
+
+    Credential.tx_from_keypair_credential!(Crypto.server_keypair(), %{
+      parent: invite[:credentialSubject][:misc][:id],
+      holder: did_stored |> DID.show(),
+      kind: "fulfill"
+    })
+  end
+
+  @doc """
+  Map version of fulfill.
+  """
+  def fulfill_map(pk64, invite = %{}, mk_cred \\ &fulfill_zero_map(&1, &2)) do
+    {:ok, cred} =
+      Repo.transaction(fn ->
+        # TODO: Repo.one!() is jeopardising high availability set ups where we don't
+        # guaranntee singularity of DID <-> Key relationships
+
+        key = invite[:issuer] |> DID.read() |> Key.by_did() |> Repo.one!()
+
+        {_, true} =
+          {invite, Credential.verify_map(invite, key.public_key |> Crypto.read!())}
+          |> is_fresh()
+          |> is_vacant()
+
+        _cred =
+          Credential.tx_from_keypair_credential!(Crypto.server_keypair(), %{
+            parent: invite[:id],
+            kind: "decrement"
+          })
+
+        # TODO: Should this sinful stuff be a function?
+        pk_stored =
+          case pk64 |> Key.by_pk() |> Repo.all() do
+            [] ->
+              Key.changeset(%{public_key: pk64}) |> Repo.insert!()
+
+            [x = %DoAuth.Key{}] ->
+              x
+          end
+
+        _did_stored =
+          case DID.by_pk64(pk64) |> Repo.all() do
+            [] ->
+              DoAuth.DID.from_key(pk_stored) |> Repo.insert!()
+
+            [x = %DoAuth.DID{}] ->
+              x
+          end
+
+        mk_cred.(pk64, invite)
+      end)
+
+    cred
+  end
+
   @doc """
   Checks that invite is valid and still has slots.
   Creates two things: a credential, issued by the server, that links back to the
@@ -58,7 +115,13 @@ defmodule DoAuth.Invite do
       Repo.transaction(fn ->
         # TODO: Repo.one!() is jeopardising high availability set ups where we don't
         # guaranntee singularity of DID <-> Key relationships
-        key = invite.subject.claim["holder"] |> DID.read() |> Key.by_did() |> Repo.one!()
+        key =
+          invite.issuer
+          |> Repo.preload(Credential.preload_entity())
+          |> Map.get(:did)
+          # |> DID.read()
+          |> Key.by_did()
+          |> Repo.one!()
 
         {_, true} =
           {invite, Credential.verify(invite, key.public_key |> Crypto.read!())}
@@ -104,18 +167,31 @@ defmodule DoAuth.Invite do
   defp is_vacant({err, false}), do: {err, false}
 
   defp is_vacant({i, true}) do
+    parent_id =
+      case i do
+        %Credential{} -> i.misc["location"]
+        _ -> i[:id]
+      end
+
     # case(from(c in Subject, where: fragment(~s(? ->> 'parent': ))))
     fulfilled =
       from(s in Subject,
         where:
-          fragment(~s(? ->> 'parent' = ?), s.claim, ^i.misc["id"]) and
+          fragment(~s(? ->> 'parent' = ?), s.claim, ^parent_id) and
             fragment(~s(? ->> 'kind' = ?), s.claim, "decrement")
       )
       |> Repo.aggregate(:count)
 
-    i = i |> Repo.preload(Credential.preload_credential())
+    # TODO: REMOVE THIS WORKAROUND! CONVERGE EXTERNAL (MAP) CREDS AND INTERNAL ECTO CREDS!
+    capacity =
+      case i do
+        %Credential{} ->
+          i |> Repo.preload(Credential.preload_credential())
+          i.subject.claim["capacity"]
 
-    capacity = i.subject.claim["capacity"]
+        _ ->
+          i[:credentialSubject][:count]
+      end
 
     if capacity > fulfilled do
       {i, true}

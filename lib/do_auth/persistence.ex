@@ -67,6 +67,7 @@ defmodule DoAuth.Persistence do
             _ ->
               raise impossibility
           end
+          |> Repo.preload(:key)
 
         _entity_stored =
           case DoAuth.Entity.by_did_id(did_stored.id) |> Repo.all() do
@@ -96,10 +97,39 @@ defmodule DoAuth.Persistence do
               impossibility
           end
 
+        _root_invite = ensure_root_invite(did_stored)
+
         {:ok, credential}
       end)
     else
       populate_do(retries + 1)
+    end
+  end
+
+  def ensure_root_invite(did_stored) do
+    did_as_string = DoAuth.DID.show(did_stored)
+
+    case(
+      from(c in DoAuth.Subject,
+        where:
+          fragment(
+            ~s(? ->> 'kind' = 'invite' AND ? ->> 'holder' = ?),
+            c.claim,
+            c.claim,
+            ^did_as_string
+          )
+      )
+      |> Repo.all()
+    ) do
+      [] ->
+        # TODO: Make amount of root invites configurable
+        DoAuth.Invite.grant(did_stored, 10)
+
+      [x = %DoAuth.Subject{}] ->
+        from(c in DoAuth.Credential, where: c.subject_id == ^x.id) |> Repo.one!()
+
+      _ ->
+        raise "Multiple root invites were generated. It is impossible and signals serious tampering or exploitation."
     end
   end
 
