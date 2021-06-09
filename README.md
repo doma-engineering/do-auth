@@ -15,12 +15,19 @@
 - Elixir v1.9.1
 - Make
 - PostgreSQL v12
+- Libsodium
+
+`sudo apt install erlang elixir make postgresql libsodium-dev`
 
 ## Prepare dev env
 
-1. Generate two secrets with `phx.gen.secret`
-2. Populate `config/dev.secret.exs` following example in `config/test.non-secret.exs`
-3. Run `make dev` to insert pre-commit hooks and other boring things related to
+1. Run `cp ./config/test.non-secret.exs ./config/dev.secret.exs`
+2. Run `mix deps.get`
+3. Generate two secrets with `mix phx.gen.secret` for: `secret_key_base` and `signing_salt`
+4. Generate one secret with `mix phx.gen.secret 32` for: `hash_salt`
+5. Populate `config/dev.secret.exs` following example in `config/test.non-secret.exs`
+6. Back up your configuration into your password / credential manager
+7. Run `make dev` to insert pre-commit hooks and other boring things related to
    dev environment set-up, such as initialise a local PgSQL 12 database and add
    a user to it.
 
