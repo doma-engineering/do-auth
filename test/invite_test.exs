@@ -11,7 +11,7 @@ defmodule InviteTest do
   # alias DoAuth.Key
   alias DoAuth.Invite
 
-  test "Invitations can be fulfilled" do
+  test "invitations can be fulfilled" do
     DoAuth.Persistence.populate_do()
     kp = Crypto.server_keypair()
     did = kp.public |> Crypto.show() |> DID.by_pk64() |> Repo.one!() |> Repo.preload(:key)

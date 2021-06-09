@@ -43,6 +43,7 @@ defmodule DoAuth.MixProject do
       {:plug_cowboy, "~> 2.1"},
       {:enacl, "~> 1.1"},
       {:typed_struct, "~> 0.2.1"},
+      {:nimble_parsec, "~> 1.1.0"},
       {:dialyxir, "~> 1.1.0", only: [:dev], runtime: false}
     ]
   end

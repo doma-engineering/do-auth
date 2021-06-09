@@ -35,6 +35,8 @@ defmodule DoAuth.Web.Router do
     get("/", Chappy.Chappy, :the_endpoint)
     get("/tofu", Chappy.Tofu, :me)
     post("/invite", Chappy.Invite, :fulfill_and_grant)
+    post("/nickserv/register", Chappy.NickServ, :reg)
+    post("/nickserv/cloak", Chappy.NickServ, :cloak)
   end
 
   scope "/api", DoAuth do
