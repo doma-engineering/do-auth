@@ -17,7 +17,7 @@
 - PostgreSQL v12
 - Libsodium
 
-`sudo apt install erlang elixir make postgresql libsodium-dev`
+`sudo apt install erlang elixir make postgresql libsodium-dev gcc`
 
 ## Prepare dev env
 
