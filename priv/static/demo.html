@@ -54,8 +54,8 @@
                         }
                     }
 
-                    window.doAuth.crypto.mainKeyInit2 = (pass, slip0) => {
-                        slip1 = {...slip0, salt: doAuth.crypto.show(sodium.randombytes_buf(slip0.saltSize))}
+                    window.doAuth.crypto.mainKeyInit2 = (pass, slipConfig) => {
+                        slip1 = {...slipConfig, salt: doAuth.crypto.show(sodium.randombytes_buf(slipConfig.saltSize))}
                         mkey = doAuth.crypto.mainKeyReproduce2(pass, slip1)
                         return [mkey, slip1]
                     }
@@ -162,13 +162,96 @@
                         return doAuth.credential.verify(cred, doAuth.crypto.read(pk))
                     }
 
+                    window.util = {}
+
+                    window.util.prettyPrint = (x) => JSON.stringify(x, null, 2)
+
+                    window.wallet = {}
+
+                    window.wallet.setupCallbacksDo = () => {
+                        const qs = (path, phi) => {
+                            input = document.querySelectorAll(path + " .input")
+                            output = document.querySelectorAll(path + " .output")
+                            if (!(input.length === 1 && output.length === 1)) {
+                                throw("Expected to find exactly one input and output classes for path '" + path + "'")
+                            }
+                            [...input[0].children].map(x => {
+                                if (x.type === "submit") {
+                                    x.addEventListener("click", phi(input[0], output[0]))
+                                }
+                            })
+                        }
+
+                        qs(".crypto .mainKeyInit", (input, output) => () => {
+                            if (localStorage.getItem("slip")) {
+                                return output.textContent = util.prettyPrint({error: "slip is already stored in the localStorage"})
+                            }
+                            pass = input.querySelectorAll(".password")[0].value
+                            mkey = doAuth.crypto.mainKey(pass)
+                            doAuth.state.mkey = mkey
+                            slip = localStorage.getItem("slip")
+                            output.textContent = util.prettyPrint({mkey: doAuth.crypto.show(mkey), slip: JSON.parse(slip)})
+                        })
+
+                        qs(".crypto .withLocalStorageMainKeyReproduce", (input, output) => () => {
+                            if (!(localStorage.getItem("slip"))) {
+                                return output.textContent = util.prettyPrint({error: "slip is not stored in the localStorage"})
+                            }
+                            pass = input.querySelectorAll(".password")[0].value
+                            mkey = doAuth.crypto.mainKey(pass)
+                            doAuth.state.mkey = mkey
+                            slip = localStorage.getItem("slip")
+                            output.textContent = util.prettyPrint({mkey: doAuth.crypto.show(mkey), slip: JSON.parse(slip)})
+                        })
+
+                        qs(".crypto .mainKeyReproduce", (input, output) => () => {
+                            pass = input.querySelectorAll(".password")[0].value
+                            mkey = doAuth.crypto.mainKey(pass)
+                            slipTxt = input.querySelectorAll(".slip")[0].value
+                            console.log(slipTxt)
+                            slip = JSON.parse(slipTxt)
+                            mkey = doAuth.crypto.mainKeyReproduce2(pass, slip)
+                            doAuth.state.mkey = mkey
+                            output.textContent = util.prettyPrint({mkey: doAuth.crypto.show(mkey), slip: slip})
+                        })
+
+                        qs(".crypto .deriveSigningKeypair", (input, output) => () => {
+                            mkey = doAuth.state.mkey
+                            if (!mkey) {
+                                return output.textContent = util.prettyPrint({error: "mkey is not loaded in doAuth.state.mkey; generate main key first"})
+                            }
+                            idTxt = input.querySelectorAll(".index")[0].value
+                            if (!idTxt) {
+                                return output.textContent = util.prettyPrint({error: "index must be set"})
+                            }
+                            id = JSON.parse(idTxt)
+                            if (!(typeof(id) === "number" && id > 0)) {
+                                return output.textContent = util.prettyPrint({error: "index must be a non-negative integer"})
+                            }
+                            kp = doAuth.crypto.deriveSigningKeypair(mkey, id)
+                            doAuth.state.kp = kp
+                            output.textContent = util.prettyPrint({public: doAuth.crypto.show(kp.public), secret: doAuth.crypto.show(kp.secret)})
+                        })
+
+                    }
+
+                    window.wallet.setupCallbacks = () => {
+                        window.doAuth.state = {}
+                        if (window.document.readyState === "complete") {
+                            window.wallet.setupCallbacksDo()
+                        } else {
+                            window.onload = window.wallet.setupCallbacksDo
+                        }
+                    }
+
                     main = async () => {
                         rcred = await doAuth.api.tofu(doAuth.server + doAuth.tofuPath)
                         console.log(rcred)
-                        console.log(JSON.stringify(rcred))
+                        console.log(util.prettyPrint(rcred))
                         console.log(doAuth.credential.prooflessJSON(rcred))
                         console.log("Verifying...")
                         console.log(doAuth.credential.verify64(rcred, rcred.credentialSubject.me))
+                        wallet.setupCallbacks()
                     }
 
                     main()
@@ -176,5 +259,59 @@
             }
         </script>
         <script src="js/sodium.js" async></script>
+        <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
+    <h1>credential wallet demo</h1>
+    <div>
+        The purpose of this wallet demo is <strong>not</strong> to demonstrate how <strong>secure</strong> wallets are meant to be implemented.
+        Its purpose is to demonstrate
+    </div>
+    <div class="crypto">
+        <h2>key management</h2>
+        <ul>
+            <li>First, generate or regenerate main key, it will store its bytes in memory of this browser tab.</li>
+            <li>Second, derive signing keypair from in-memory main key, it will put keypair into the.</li>
+        </ul>
+        <div class="mainKeyInit">
+            <h3>initial generation</h3>
+            <p>Enter your securely-stored in your password manager password for javascript to generate a keypair along with public slip.</p>
+            <p>Make sure to not lose slip. It's not secret, so you can publish it anywhere.</p>
+            <p>By default, slip shall be stored in localStorage, but don't rely on it.</p>
+            <!-- TEST for setupCallbacksDo. Uncomment to check that setupCallbacksDo crashes on init.
+            <div class="input">
+            </div>
+            -->
+            <div class="input">
+                <input class="password" type="password" placeholder="secure password" />
+                <input type="submit" value="generate keypair in this browser tab's sandbox and STORE slip IN localStorage" />
+            </div>
+            <pre class="output"></pre>
+        </div>
+        <div class="withLocalStorageMainKeyReproduce">
+            <h3>key regeneration from a password and a slip, stored in localStorage</h3>
+            <div class="input">
+                <input class="password" type="password" placeholder="secure password" />
+                <input type="submit" value="GET slip FROM localStorage and regenerate keypair in this browser tab's sandbox" />
+            </div>
+            <pre class="output"></pre>
+        </div>
+        <div class="mainKeyReproduce">
+            <h3>key regeneration from a password and a pasted slip</h3>
+            <div class="input">
+                <input class="password" type="password" placeholder="secure password" /><br />
+                <label>slip JSON</label><textarea rows="6" cols="36" class="slip"></textarea><br />
+                <input type="submit" value="regenerate keypair in this browser tab's sandbox" />
+            </div>
+            <pre class="output"></pre>
+        </div>
+        <div class="deriveSigningKeypair">
+            <h3>signing key derivation</h3>
+            <div class="input">
+                <input class="index" type="number" min="1" max="100" value="1" />
+                <input type="submit" value="generate signing keypair with given index from in-memory main key (doAuth.state.mkey)" />
+            </div>
+            <pre class="output">
+            </pre>
+        </div>
+    </div>
     </body>
 </html>
