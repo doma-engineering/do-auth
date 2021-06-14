@@ -37,7 +37,7 @@ config :do_auth, DoAuth.Repo, username: "phoenix", password: "${_pw_phoenix}"
 
 EOF
 
-cat >> "config/test.non-secret.exs" <<EOF
+cat >> "config/test.secret.exs" <<EOF
 
 config :do_auth, DoAuth.Repo, username: "phoenix", password: "${_pw_phoenix}"
 

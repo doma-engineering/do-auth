@@ -8,6 +8,3 @@ config :do_auth, DoAuth.Web,
   secret_key_base: secret_key_base, signing_salt: signing_salt
 
 config :do_auth, DoAuth.Crypto, hash_salt: hash_salt
-
-config :do_auth, DoAuth.Repo, username: "phoenix", password: "VTvtqg2KG7Kz8J+UXETTfKWnaa6VNsAOoXgp8isWaViySWRns89qkyX/mmQ55Fz1"
-
