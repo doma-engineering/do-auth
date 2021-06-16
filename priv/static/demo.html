@@ -162,7 +162,42 @@
                         return doAuth.credential.verify(cred, doAuth.crypto.read(pk))
                     }
 
+                    window.doAuth.credential.txFromKeypairCredential = (kp, claim) => {
+                        did = doAuth.did.fromPk(kp.public)
+                        tau0 = util.iso8601WithoutMSec(new Date(Date.now()))
+                        entity = did
+                        proofless = {
+                            '@context': [],
+                            type: [],
+                            issuer: entity,
+                            issuanceDate: tau0,
+                            credentialSubject: claim
+                        }
+                        sig = doAuth.crypto.sign(
+                            JSON.stringify(
+                                doAuth.crypto.canonicalise(proofless)
+                            ), kp
+                        )
+                        proof = {
+                            created: tau0,
+                            proofPurpose: "assertionMethod",
+                            signature: doAuth.crypto.show(sig.signature),
+                            type: "libsodium2021",
+                            verificationMethod: did
+                        }
+                        proofless.proof = proof
+                        return proofless
+                    }
+
+                    window.doAuth.did = {}
+
+                    window.doAuth.did.fromPk64 = (pk64) => "did:doma:" + doAuth.crypto.bland_hash(pk64)
+
+                    window.doAuth.did.fromPk = (pk) => doAuth.did.fromPk64(doAuth.crypto.show(pk))
+
                     window.util = {}
+
+                    window.util.iso8601WithoutMSec = (tau) => tau.toISOString().slice(0, -5) + "Z"
 
                     window.util.prettyPrint = (x) => JSON.stringify(x, null, 2)
 
@@ -233,6 +268,21 @@
                             output.textContent = util.prettyPrint({public: doAuth.crypto.show(kp.public), secret: doAuth.crypto.show(kp.secret)})
                         })
 
+                        qs(".credential .txFromKeypairCredential", (input, output) => () => {
+                            kp = doAuth.state.kp
+                            if (!kp) {
+                                return output.textContent = util.prettyPrint({error: "kp is not loaded in doAuth.state.kp; generate main key and derive signing keypair first"})
+                            }
+                            claimTxt = input.querySelectorAll(".claim")[0].value
+                            console.log(">" + claimTxt + "<")
+                            claim = JSON.parse(claimTxt)
+                            console.log(
+                                "wtf"
+                            )
+                            cred = doAuth.credential.txFromKeypairCredential(kp, JSON.parse(claimTxt))
+                            output.textContent = util.prettyPrint(cred)
+                        })
+
                     }
 
                     window.wallet.setupCallbacks = () => {
@@ -262,8 +312,31 @@
         <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js"></script>
     <h1>credential wallet demo</h1>
     <div>
-        The purpose of this wallet demo is <strong>not</strong> to demonstrate how <strong>secure</strong> wallets are meant to be implemented.
-        Its purpose is to demonstrate
+        The purpose of this wallet demo is <strong>not</strong> to demonstrate how <strong>secure</strong> wallets are meant to be implemented, but rather show all the functions of doauth.
+    </div>
+    <div class="credential">
+        <h2>credential signing</h2>
+        <ul>
+            <li>First, go through the steps listed in <strong>key management</strong> section</li>
+            <li>Now you can make pre-defined credentials or even paste credential subject into textarea below and get self-signed credential as the result</li>
+        </ul>
+        <div class="">
+            <h3>register with doauth server at maja.doma.dev</h3>
+        </div>
+        <div class="txFromKeypairCredential">
+            <h3>verifiable credential from JSON claim</h3>
+            <p>
+                Example of credentialSubject is <pre>{
+  "did": "did:doma:e-EKnyELclmtF1wMP6y5Xf9UxSQ-8eZRtY_GWrl0GqE=",
+  "nickname": "liberated"
+}</pre>
+            </p>
+            <div class="input">
+                <textarea rows="24" cols="80" class="claim"></textarea><br />
+                <input type="submit" value="make a signed credential" />
+            </div>
+            <pre class="output"></pre>
+        </div>
     </div>
     <div class="crypto">
         <h2>key management</h2>

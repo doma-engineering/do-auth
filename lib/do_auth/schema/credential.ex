@@ -139,6 +139,7 @@ defmodule DoAuth.Credential do
     {:ok, {:ok, cred}} =
       Repo.transaction(fn ->
         tau0 =
+          # TODO: Make this stuff, including signature embedding, embedded in misc (?)
           unless Map.get(kp, :timestamp, false) do
             DBUtils.now()
           else
