@@ -17,3 +17,4 @@ import_config("test.non-secret.exs")
 import_config("test.secret.exs")
 
 config :logger, level: :warn
+

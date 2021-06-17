@@ -97,7 +97,7 @@ defmodule DoAuth.Credential do
     cred
   end
 
-  def preload_entity(), do: [:issuer, [did: :key]]
+  def preload_entity(), do: [:url, [did: :key]]
 
   def preload_credential(),
     do: [

@@ -3,7 +3,7 @@ defmodule DBTest do
   use DoAuth.DBUtils
   alias DoAuth.Crypto
 
-  alias DoAuth.Issuer
+  alias DoAuth.URL
   alias DoAuth.DID
   # alias DoAuth.Proof
   alias DoAuth.Entity
@@ -123,12 +123,12 @@ defmodule DBTest do
 
   ############
 
-  test "can add Issuer" do
+  test "can add URL" do
     url = "https://auth.doma.dev/issuer/1"
 
     assert(
       url ==
-        Issuer.changeset(%{url: url})
+        URL.changeset(%{url: url})
         |> Repo.insert(returning: [:url])
         |> (fn x -> elem(x, 1).url end).()
     )
@@ -136,7 +136,7 @@ defmodule DBTest do
 
   ############
 
-  test "can create entity both as DID and Issuer, but not both" do
+  test "can create entity both as DID and URL, but not both" do
     {mkey, _slip} = Crypto.main_key_init("password123", DoAuthTest.very_weak_params())
 
     dids0 = Repo.all(DID)
@@ -152,12 +152,12 @@ defmodule DBTest do
     # Casually testing select btw
     [did] = Repo.all(DID) -- dids0
 
-    {:ok, issuer} =
-      Issuer.changeset(%{url: "https://auth.doma.dev/issuer/1"}) |> Repo.insert(returning: true)
+    {:ok, url} =
+      URL.changeset(%{url: "https://auth.doma.dev/issuer/1"}) |> Repo.insert(returning: true)
 
-    {:error, _} = Entity.changeset(%{issuer: issuer, did: did}) |> Repo.insert()
+    {:error, _} = Entity.changeset(%{url: url, did: did}) |> Repo.insert()
     {:ok, _} = Entity.changeset(%{did: did}) |> Repo.insert()
-    {:ok, _} = Entity.changeset(%{issuer: issuer}) |> Repo.insert()
+    {:ok, _} = Entity.changeset(%{url: url}) |> Repo.insert()
   end
 
   ############

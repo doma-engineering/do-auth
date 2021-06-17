@@ -6,7 +6,7 @@ defmodule DoAuth.Entity do
 
   schema "entities" do
     belongs_to(:did, DoAuth.DID)
-    belongs_to(:issuer, DoAuth.Issuer)
+    belongs_to(:url, DoAuth.URL)
     has_many(:proofs, DoAuth.Proof, foreign_key: :verification_method_id)
   end
 
@@ -18,30 +18,30 @@ defmodule DoAuth.Entity do
     %__MODULE__{did: DoAuth.DID.read("did:" <> p)}
   end
 
-  defp read_do(x), do: %__MODULE__{issuer: x}
+  defp read_do(x), do: %__MODULE__{url: x}
 
-  def show(%__MODULE__{issuer_id: nil, did: did = %DoAuth.DID{}}) do
+  def show(%__MODULE__{url_id: nil, did: did = %DoAuth.DID{}}) do
     did = Repo.preload(did, :key)
     DoAuth.DID.show(did)
   end
 
-  def show(%__MODULE__{did_id: nil, issuer: issuer = %DoAuth.Issuer{}}) do
-    issuer |> DoAuth.Issuer.show()
+  def show(%__MODULE__{did_id: nil, url_id: url = %DoAuth.URL{}}) do
+    url |> DoAuth.URL.show()
   end
 
-  def to_map(%__MODULE__{issuer_id: nil, did: did = %DoAuth.DID{}}, opts) do
+  def to_map(%__MODULE__{url_id: nil, did: did = %DoAuth.DID{}}, opts) do
     did |> Repo.preload(:key) |> DoAuth.DID.to_map(opts)
   end
 
-  def to_map(%__MODULE__{did_id: nil, issuer: issuer = %DoAuth.Issuer{}}, opts) do
-    issuer |> DoAuth.Issuer.to_map(opts)
+  def to_map(%__MODULE__{did_id: nil, url: url = %DoAuth.URL{}}, opts) do
+    url |> DoAuth.URL.to_map(opts)
   end
 
   def to_map(x), do: to_map(x, [])
 
   @spec from_did(any) :: Ecto.Changeset.t()
   def from_did(did), do: changeset(%{did: did})
-  def from_issuer(issuer), do: changeset(%{issuer: issuer})
+  def from_url(url), do: changeset(%{url: url})
 
   def by_did_id(did_id) do
     from(e in __MODULE__,
@@ -60,7 +60,7 @@ defmodule DoAuth.Entity do
   ```
   @spec changeset(cauldron(), ingredients()) :: Changeset.t()
   def changeset(c, stuff) do
-    with xs <- [:issuer, :did] do
+    with xs <- [:url, :did] do
       c |> cast(stuff, xs) |> DBUtils.validate_xor(xs)
     end
   end
@@ -82,9 +82,9 @@ defmodule DoAuth.Entity do
            (if stuff[:did] do
               Ecto.build_assoc(stuff[:did], :entity)
             else
-              Ecto.build_assoc(stuff[:issuer], :entity)
+              Ecto.build_assoc(stuff[:url], :entity)
             end) do
-      dummy_schema = %{did: :integer, issuer: :integer}
+      dummy_schema = %{did: :integer, url: :integer}
       ids = stuff |> Enum.map(fn {k, v} -> {k, Map.get(v, :id)} end) |> Enum.into(%{})
 
       dummy_changeset =
