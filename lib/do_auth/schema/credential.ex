@@ -34,7 +34,7 @@ defmodule DoAuth.Credential do
     belongs_to(:proof, Proof)
     many_to_many(:contexts, Context, join_through: CC)
     many_to_many(:types, CredentialType, join_through: CCT)
-    field(:timestamp, :utc_datetime)
+    field(:timestamp, :utc_datetime, read_after_writes: true)
     field(:misc, :map)
   end
 
@@ -133,7 +133,7 @@ defmodule DoAuth.Credential do
           map()
         ) ::
           %__MODULE__{}
-  def tx_from_keypair_credential!(x, y, z \\ %{})
+  def tx_from_keypair_credential!(kp, claim, misc \\ %{})
 
   def tx_from_keypair_credential!(kp = %{public: pk}, claim, misc) do
     {:ok, {:ok, cred}} =
@@ -146,8 +146,12 @@ defmodule DoAuth.Credential do
             kp.timestamp
           end
 
-        did = DID.by_pk64(pk |> Crypto.show()) |> Repo.one()
-        entity = Entity.by_did_id(did.id) |> Repo.one() |> Repo.preload(preload_entity())
+        did = DID.by_pk64(pk |> Crypto.show()) |> Repo.one!()
+        entity = case Entity.by_did_id(did.id) |> Repo.all() do
+         [e = %Entity{}] -> e
+         [] -> Entity.from_did(did) |> Repo.insert!()
+         _ -> throw "Impossible happened"
+        end |> Repo.preload(preload_entity())
         {:ok, subject} = %{claim: claim} |> Subject.changeset() |> Repo.insert(returning: true)
 
         # TODO: Make it clear that ID is not known at this stage and isn't
@@ -330,6 +334,14 @@ defmodule DoAuth.Credential do
     changeset(%__MODULE__{}, %{issuer: issuer, subject: subject, proof: proof})
     |> Repo.insert(returning: [:id])
     |> maybe_tag_credential_with_contexts_and_types(ctxs, types)
+  end
+
+  def slow_and_dangerous_do_not_execute_get_all_credentials() do
+    Repo.all(__MODULE__) |> Enum.map(fn x -> x |> Repo.preload(preload_credential()) end)
+  end
+
+  def slow_and_dangerous_do_not_execute_get_all_credential_maps() do
+    slow_and_dangerous_do_not_execute_get_all_credentials() |> Enum.map(fn x -> x |> to_map(unwrapped: true) end)
   end
 
   # TODO: Unify, put into a lib.

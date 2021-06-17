@@ -106,8 +106,14 @@ defmodule DoAuth.Persistence do
     end
   end
 
-  def ensure_root_invite(did_stored) do
-    did_as_string = DoAuth.DID.show(did_stored)
+  def ensure_root_invite(did_stored \\ {}) do
+    did_as_string = DoAuth.DID.show(if did_stored == {} do
+      DoAuth.DID.by_pk64(Crypto.server_keypair()[:public] |> Crypto.show())
+      |> Repo.one!()
+      |> Repo.preload(:key)
+    else
+      did_stored
+    end)
 
     case(
       from(c in DoAuth.Subject,

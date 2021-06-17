@@ -8,7 +8,7 @@ defmodule DoAuth.Proof do
     belongs_to(:verification_method, Entity)
     field(:signature, :string)
     has_one(:credential, Credential)
-    field(:timestamp, :utc_datetime)
+    field(:timestamp, :utc_datetime, read_after_writes: true)
   end
 
   def from_sig(proving_entity, sig) do
@@ -23,12 +23,15 @@ defmodule DoAuth.Proof do
   ## TODO: canonical JSON rep
   @spec changeset(ingredients()) :: Changeset.t()
   def changeset(stuff) do
+    #stuff = Map.put_new(stuff, :timestamp, DBUtils.now())
     result = Ecto.build_assoc(stuff[:verification_method], :proofs)
+    # TODO: understand how this function works. The fuck is change for instance?!
+    # TODO: write docs for this function
     result |> change(stuff)
   end
 
   @spec to_map(%__MODULE__{}, [unwrapped: true] | []) :: map()
-  def to_map(%__MODULE__{timestamp: timestamp, verification_method: entity, signature: sig},
+  def to_map(_p = %__MODULE__{timestamp: timestamp, verification_method: entity, signature: sig},
         unwrapped: true
       ) do
     # TODO: Make use of proof_purposes table :shrug:
