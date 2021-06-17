@@ -8,7 +8,7 @@ defmodule DoAuth.Disclosure do
   schema "disclosures" do
     belongs_to(:did, DoAuth.DID)
     belongs_to(:disclosure, DoAuth.Credential)
-    field(:timestamp, :utc_datetime)
+    field(:timestamp, :utc_datetime, read_after_writes: true)
   end
 
   @spec changeset(cauldron(), ingredients()) :: Changeset.t()
