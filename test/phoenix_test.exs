@@ -72,4 +72,15 @@ defmodule PhoenixText do
       assert true
     end
   end
+  
+  describe("GET /chappy/tofu") do
+      
+    test "Tofu endpoint responds with JSON", %{conn: c} do
+
+      Persistence.populate_do
+      c = get(c, "/chappy/tofu")
+      assert json_response(c, 200)["id"] == "/chappy/tofu"
+
+    end
+  end
 end
