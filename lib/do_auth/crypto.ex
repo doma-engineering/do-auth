@@ -148,8 +148,8 @@ defmodule DoAuth.Crypto do
   """
   @spec verify(binary() | iolist(), detached_sig()) :: boolean
   def verify(msg, %{public: pk, signature: sig}) do
-    #require Logger
-    #Logger.warn("we're there #{inspect({sig, msg, pk}, pretty: true)}")
+    # require Logger
+    # Logger.warn("we're there #{inspect({sig, msg, pk}, pretty: true)}")
     C.sign_verify_detached(sig, msg, pk)
   end
 

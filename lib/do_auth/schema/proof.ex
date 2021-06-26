@@ -23,7 +23,7 @@ defmodule DoAuth.Proof do
   ## TODO: canonical JSON rep
   @spec changeset(ingredients()) :: Changeset.t()
   def changeset(stuff) do
-    #stuff = Map.put_new(stuff, :timestamp, DBUtils.now())
+    # stuff = Map.put_new(stuff, :timestamp, DBUtils.now())
     result = Ecto.build_assoc(stuff[:verification_method], :proofs)
     # TODO: understand how this function works. The fuck is change for instance?!
     # TODO: write docs for this function

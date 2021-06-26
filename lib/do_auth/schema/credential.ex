@@ -138,8 +138,8 @@ defmodule DoAuth.Credential do
   def tx_from_keypair_credential!(kp = %{public: pk}, claim, misc) do
     {:ok, {:ok, cred}} =
       Repo.transaction(fn ->
+        # TODO: Make this stuff, including signature embedding, embedded in misc (?)
         tau0 =
-          # TODO: Make this stuff, including signature embedding, embedded in misc (?)
           unless Map.get(kp, :timestamp, false) do
             DBUtils.now()
           else
@@ -147,11 +147,15 @@ defmodule DoAuth.Credential do
           end
 
         did = DID.by_pk64(pk |> Crypto.show()) |> Repo.one!()
-        entity = case Entity.by_did_id(did.id) |> Repo.all() do
-         [e = %Entity{}] -> e
-         [] -> Entity.from_did(did) |> Repo.insert!()
-         _ -> throw "Impossible happened"
-        end |> Repo.preload(preload_entity())
+
+        entity =
+          case Entity.by_did_id(did.id) |> Repo.all() do
+            [e = %Entity{}] -> e
+            [] -> Entity.from_did(did) |> Repo.insert!()
+            _ -> throw("Impossible happened")
+          end
+          |> Repo.preload(preload_entity())
+
         {:ok, subject} = %{claim: claim} |> Subject.changeset() |> Repo.insert(returning: true)
 
         # TODO: Make it clear that ID is not known at this stage and isn't
@@ -341,7 +345,8 @@ defmodule DoAuth.Credential do
   end
 
   def slow_and_dangerous_do_not_execute_get_all_credential_maps() do
-    slow_and_dangerous_do_not_execute_get_all_credentials() |> Enum.map(fn x -> x |> to_map(unwrapped: true) end)
+    slow_and_dangerous_do_not_execute_get_all_credentials()
+    |> Enum.map(fn x -> x |> to_map(unwrapped: true) end)
   end
 
   # TODO: Unify, put into a lib.

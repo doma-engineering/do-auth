@@ -17,8 +17,7 @@ defmodule PhoenixText do
     test "Can chain invites", %{conn: c} do
       Persistence.populate_do()
 
-      invite =
-        Persistence.ensure_root_invite() |> Repo.preload(Credential.preload_credential())
+      invite = Persistence.ensure_root_invite() |> Repo.preload(Credential.preload_credential())
 
       {m, _} = Crypto.main_key_init("in plain 5ight", DoAuthTest.very_weak_params())
       kp1 = Crypto.derive_signing_keypair(m, 1)
@@ -33,8 +32,8 @@ defmodule PhoenixText do
 
       {_f1, invite2} = {c.assigns[:fulfillment], c.assigns[:grant]}
 
-      #dbg_body = pk1 |> Crypto.show() |> Crypto.bland_hash()
-      #did = from(d in DID, where: d.body == ^dbg_body) |> Repo.one!()
+      # dbg_body = pk1 |> Crypto.show() |> Crypto.bland_hash()
+      # did = from(d in DID, where: d.body == ^dbg_body) |> Repo.one!()
 
       invite2_map = invite2 |> Credential.to_map(unwrapped: true)
 
@@ -50,13 +49,15 @@ defmodule PhoenixText do
 
       # TODO: Change default behaviour to plain object, replace unwrapped: true
       # with tagged: true that would tag the resulting map with its type
-      invite2_wrapped_map = Credential.tx_from_keypair_credential!(kp1, invite2_map) |> Credential.to_map(unwrapped: true)
+      invite2_wrapped_map =
+        Credential.tx_from_keypair_credential!(kp1, invite2_map)
+        |> Credential.to_map(unwrapped: true)
 
-
-      c = post(c, "/chappy/invite", %{
-        publicKey: pk2 |> Crypto.show(),
-        invite: invite2_wrapped_map |> Jason.encode!()
-      })
+      c =
+        post(c, "/chappy/invite", %{
+          publicKey: pk2 |> Crypto.show(),
+          invite: invite2_wrapped_map |> Jason.encode!()
+        })
 
       {_f2, _invite3} = {c.assigns[:fulfillment], c.assigns[:grant]}
 
@@ -72,15 +73,12 @@ defmodule PhoenixText do
       assert true
     end
   end
-  
-  describe("GET /chappy/tofu") do
-      
-    test "Tofu endpoint responds with JSON", %{conn: c} do
 
-      Persistence.populate_do
+  describe("GET /chappy/tofu") do
+    test "Tofu endpoint responds with JSON", %{conn: c} do
+      Persistence.populate_do()
       c = get(c, "/chappy/tofu")
       assert json_response(c, 200)["id"] == "/chappy/tofu"
-
     end
   end
 end
