@@ -39,6 +39,8 @@ EOF
 
 cat >> "config/test.secret.exs" <<EOF
 
+use Mix.Config
+
 config :do_auth, DoAuth.Repo, username: "phoenix", password: "${_pw_phoenix}"
 
 EOF
