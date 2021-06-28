@@ -37,7 +37,7 @@ defmodule PhoenixText do
 
       invite2_map = invite2 |> Credential.to_map(unwrapped: true)
 
-      # MatchError <- {{:issued_not_by_us_or_issued_by_us_but_held_by_someone_else, :issuer_is_not_the_holder, _}, false} =
+      # We can't just register with the raw invite returned by the server
       assert_raise(MatchError, fn ->
         post(c, "/chappy/invite", %{
           publicKey: pk2 |> Crypto.show(),
@@ -53,6 +53,8 @@ defmodule PhoenixText do
         Credential.tx_from_keypair_credential!(kp1, invite2_map)
         |> Credential.to_map(unwrapped: true)
 
+      # Only way to register so far is for the person who got invite from the
+      # server to wrap it into VC with their key
       c =
         post(c, "/chappy/invite", %{
           publicKey: pk2 |> Crypto.show(),
