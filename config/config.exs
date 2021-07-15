@@ -8,6 +8,7 @@
 use Mix.Config
 
 config :do_auth,
+  default_root_invites: 20,
   ecto_repos: [DoAuth.Repo]
 
 # Configures the endpoint

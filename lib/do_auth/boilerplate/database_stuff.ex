@@ -28,8 +28,6 @@ defmodule DoAuth.Boilerplate.DatabaseStuff do
         CredentialType,
         CredentialCredentialType,
         ProofType,
-        # TODO: We have Authentication purpose, but also now we have AntiTamper
-        # purpose. Probably should encode them at some point.
         ProofPurpose
       }
     end

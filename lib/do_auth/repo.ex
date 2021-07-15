@@ -94,8 +94,8 @@ defmodule DoAuth.Repo do
 
   defp or_insert_errors(changeset, fields) do
     %{changes: changes, errors: errs} = changeset
-    msg = "exactly one must be set"
-    errs1 = Enum.map(fields, &{&1, {msg, [validation: :xor]}})
+    msg = "at least one must be set"
+    errs1 = Enum.map(fields, &{&1, {msg, [validation: :or]}})
     cs = Map.drop(changes, fields)
     %{changeset | changes: cs, errors: errs1 ++ errs, valid?: false}
   end

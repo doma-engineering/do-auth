@@ -14,7 +14,7 @@ defmodule DoAuthCryptoTest do
   """
   @spec very_weak_params() :: Crypto.params()
   def very_weak_params() do
-    %{ops: 1, mem: 1_000_00, salt_size: 16}
+    %{ops: 1, mem: 100_000, salt_size: 16}
   end
 
   test "has secret key base set" do
@@ -28,7 +28,6 @@ defmodule DoAuthCryptoTest do
   test "can generate main (a.k.a. 'master') keys" do
     # Run this once
     {mkey_real, _} = Crypto.main_key_init(@pass_iolist)
-    # TODO: Prop-test with weak crypto params
     {mkey, slip} = Crypto.main_key_init(@pass_iolist, very_weak_params())
     mkey1 = Crypto.main_key_reproduce(@pass_binary, slip)
     assert(mkey == mkey1)

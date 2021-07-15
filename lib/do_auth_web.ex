@@ -17,6 +17,9 @@ defmodule DoAuthWeb do
   and import those modules here.
   """
 
+  @spec controller ::
+          {:__block__, [],
+           [{:alias, [...], [...]} | {:import, [...], [...]} | {:use, [...], [...]}, ...]}
   def controller do
     quote do
       use Phoenix.Controller, namespace: DoAuthWeb
@@ -27,6 +30,9 @@ defmodule DoAuthWeb do
     end
   end
 
+  @spec view ::
+          {:__block__, [],
+           [{:__block__, [], [...]} | {:import, [...], [...]} | {:use, [...], [...]}, ...]}
   def view do
     quote do
       use Phoenix.View,
@@ -42,6 +48,7 @@ defmodule DoAuthWeb do
     end
   end
 
+  @spec router :: {:__block__, [], [{:import, [...], [...]} | {:use, [...], [...]}, ...]}
   def router do
     quote do
       use Phoenix.Router
@@ -51,6 +58,7 @@ defmodule DoAuthWeb do
     end
   end
 
+  @spec channel :: {:__block__, [], [{:import, [...], [...]} | {:use, [...], [...]}, ...]}
   def channel do
     quote do
       use Phoenix.Channel
@@ -75,6 +83,7 @@ defmodule DoAuthWeb do
   @doc """
   When used, dispatch to the appropriate controller/view/etc.
   """
+  @spec __using__(atom) :: any
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
   end

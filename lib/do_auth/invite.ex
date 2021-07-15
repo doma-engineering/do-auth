@@ -9,8 +9,17 @@ defmodule DoAuth.Invite do
   use DoAuth.Boilerplate.DatabaseStuff
   alias DoAuth.{Crypto}
 
-  @spec grant(%DID{}, pos_integer()) :: %Credential{}
-  def grant(did = %DID{}, n) do
+  @spec grant(%DID{}, pos_integer()) :: {:ok, %Credential{}} | {:error, any()}
+  def grant(did, n) do
+    try do
+      {:ok, grant!(did, n)}
+    rescue
+      e -> {:error, e}
+    end
+  end
+
+  @spec grant!(%DID{}, pos_integer()) :: %Credential{}
+  def grant!(%DID{} = did, n) do
     Credential.transact_with_keypair_from_subject_map!(
       Crypto.server_keypair(),
       %{

@@ -6,6 +6,7 @@ defmodule DoAuth.Cat do
   @doc """
   Exploding version of fmap.
   """
+  @spec fmap!(any, any) :: list | map
   def fmap!(f_a, a__b) do
     {:ok, f_b} = fmap(f_a, a__b)
     f_b
@@ -15,6 +16,7 @@ defmodule DoAuth.Cat do
   Apply a function deeply traversing f_a for which an Enumerable implementation exists.
   2-tuples are traversed on the right.
   """
+  @spec fmap(any, any) :: {:ok, list | map} | {:error, any}
   def fmap(%{} = f_a, a__b) do
     case fmap(f_a |> Enum.into([]), a__b) do
       {:ok, f_b} -> {:ok, f_b |> Enum.into(%{})}

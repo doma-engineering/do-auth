@@ -5,6 +5,8 @@ defmodule DoAuth.Application do
 
   use Application
 
+  # Bug in dialyzer or elixir that Jose couldn't reproduce... Even @spec start(any, any) :: any doesn't dialyze for me.
+  # credo:disable-for-next-line
   def start(_type, _args) do
     children = [
       # Start the Ecto repository
@@ -34,6 +36,7 @@ defmodule DoAuth.Application do
 
   # Tell Phoenix to update the endpoint configuration
   # whenever the application is updated.
+  @spec config_change(any, any, any) :: :ok
   def config_change(changed, _new, removed) do
     DoAuthWeb.Endpoint.config_change(changed, removed)
     :ok

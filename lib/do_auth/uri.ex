@@ -125,10 +125,10 @@ defmodule DoAuth.URI do
   """
   @spec url2s(url()) :: String.t()
   def url2s(
-        m = %{
+        %{
           protocol: protocol,
           fqdn: fqdn
-        }
+        } = m
       ) do
     "#{protocol}://#{fqdn}#{pt(m[:port])}#{p(m[:path])}#{q(m[:query])}#{f(m[:fragment])}"
   end
@@ -137,7 +137,7 @@ defmodule DoAuth.URI do
   URN to string.
   """
   @spec urn2s(urn()) :: String.t()
-  def urn2s(m = %{scheme: scheme, path: path}) do
+  def urn2s(%{scheme: scheme, path: path} = m) do
     "#{scheme}#{np(path)}#{q(m[:query])}#{f(m[:fragment])}"
   end
 
@@ -145,7 +145,7 @@ defmodule DoAuth.URI do
   DID to string.
   """
   @spec did2s(did()) :: String.t()
-  def did2s(m = %{method: method, body: body}) do
+  def did2s(%{method: method, body: body} = m) do
     "did:#{method}:#{body}#{p(m[:path])}#{q(m[:query])}#{f(m[:fragment])}"
   end
 
@@ -153,7 +153,7 @@ defmodule DoAuth.URI do
   Convert Elixir URI to DoAuth URL.
   """
   @spec uri2url(URI.t()) :: url()
-  def uri2url(ex_uri = %URI{host: fqdn, scheme: protocol}) do
+  def uri2url(%URI{host: fqdn, scheme: protocol} = ex_uri) do
     with url <-
            ex_uri
            |> Map.from_struct()

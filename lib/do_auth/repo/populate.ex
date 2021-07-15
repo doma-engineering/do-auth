@@ -27,7 +27,8 @@ defmodule DoAuth.Repo.Populate do
   @doc """
   Exposed for testing.
   """
-  @spec populate_do(any) :: any
+  @spec populate_do(%{secret: binary(), public: binary()}, non_neg_integer()) ::
+          {:ok, %Credential{}}
   def populate_do(kp \\ Crypto.server_keypair(), retries \\ 0)
 
   def populate_do(_, @max_retries) do
@@ -40,55 +41,13 @@ defmodule DoAuth.Repo.Populate do
         Repo.transaction(fn ->
           pk64 = kp.public |> Crypto.show()
 
-          impossibility =
-            "Server key is added more than once. It shouldn't be possible, and signals some serious tampering."
+          require Logger
+          Logger.warn("Beep")
+          %Issuer{} = DID.sin_one_pk64!(pk64) |> Issuer.sin_one_did!()
+          Logger.warn("Boop")
 
-          pk_stored =
-            case Key.all_by_pk64(pk64) do
-              [] ->
-                Key.from_pk64!(pk64)
-
-              # Key.changeset(%{public_key: pk64}) |> Repo.insert!()
-
-              [x = %Key{}] ->
-                x
-
-              _ ->
-                raise impossibility
-            end
-
-          did_stored =
-            case DID.all_by_pk64(pk64) do
-              [] ->
-                DID.from_key_schema!(pk_stored)
-
-              [x = %DID{}] ->
-                x
-
-              _ ->
-                raise impossibility
-            end
-            |> Repo.preload(:key)
-
-          _issuer_stored =
-            case Issuer.all_by_did_id(did_stored.id) do
-              [] ->
-                Issuer.from_did_schema(did_stored)
-
-              [x = %Issuer{}] ->
-                x
-
-              _ ->
-                raise impossibility
-            end
-
-          # case from(c in DoAuth.Subject, where: c.claim["me"] == ^pk64) |> Repo.all() do
           credential =
             case Subject.all_by_credential_subject(%{"me" => pk64}) do
-              # case from(c in Subject,
-              #       where: fragment(~s(? ->> 'me' = ?), c.claim, ^pk64)
-              #     )
-              #     |> Repo.all() do
               [] ->
                 Credential.transact_with_keypair_from_subject_map!(kp, %{"me" => pk64})
 
@@ -96,20 +55,23 @@ defmodule DoAuth.Repo.Populate do
                 from(c in Credential, where: c.subject_id == ^x.id) |> Repo.one!()
 
               _ ->
-                impossibility
+                raise "Server key is added more than once. It shouldn't be possible, and signals some serious tampering."
             end
+
+          Logger.warn("HUGE SUCCESS #{inspect(credential |> Credential.preload(), pretty: true)}")
 
           credential
         end)
 
-      ensure_root_invite()
+      ensure_root_invite!()
       {:ok, credential |> Credential.preload()}
     else
       populate_do(retries + 1)
     end
   end
 
-  def ensure_root_invite(did_stored \\ {}) do
+  @spec ensure_root_invite!({} | %DID{}) :: %Credential{}
+  def ensure_root_invite!(did_stored \\ {}) do
     did_stored =
       if did_stored == {} do
         DID.one_by_pk64!(Crypto.server_keypair64()[:public])
@@ -132,8 +94,7 @@ defmodule DoAuth.Repo.Populate do
 
     case q0 |> Repo.all() do
       [] ->
-        # TODO: Make amount of root invites configurable
-        Invite.grant(did_stored, 20)
+        Invite.grant!(did_stored, Application.get_env(:do_auth, :default_root_invites))
 
       [x = %Subject{}] ->
         Credential.one_by_subject_id!(x.id)

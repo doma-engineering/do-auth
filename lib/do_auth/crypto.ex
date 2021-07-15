@@ -7,9 +7,7 @@ defmodule DoAuth.Crypto do
   alias :enacl, as: C
 
   @typedoc """
-  TODO: Ask jlouis666 why don't we have pwhash_limit/0 type exported:
-  :0:unknown_type
-  Unknown type: :enacl.pwhash_limit/0.
+  Catch-all standin while https://github.com/jlouis/enacl/issues/59 gets sorted out.
   """
   @type pwhash_limit :: atom()
 
@@ -91,6 +89,7 @@ defmodule DoAuth.Crypto do
           atom()
           | String.t()
           | number()
+          | DateTime.t()
           | list(canonicalisable_value())
           | %{canonicalisable_key() => canonicalisable_value()}
 
@@ -175,7 +174,6 @@ defmodule DoAuth.Crypto do
     C.generichash(@hash_size, msg) |> Base.url_encode64()
   end
 
-  # TODO: Make sure that everything has exploding and non-exploding versions.
   @doc """
   Convert to URL-safe Base 64.
   """
@@ -189,7 +187,30 @@ defmodule DoAuth.Crypto do
   def read!(x), do: Base.url_decode64!(x)
 
   @doc """
-    Preventing canonicalization bugs by ordering maps lexicographically into a
+  Non-exploding version of read.
+  """
+  @spec read(String.t()) :: {:ok, binary()} | {:error, any()}
+  def read(x), do: Base.url_decode64(x)
+
+  @spec canonicalise_term(canonicalisable_value()) ::
+          {:ok, canonicalised_value()} | {:error, any()}
+  def canonicalise_term(x) do
+    try do
+      {:ok, canonicalise_term!(x)}
+    rescue
+      e -> {:error, e}
+    end
+  end
+
+  @spec is_canonicalised?(any()) :: boolean()
+  def is_canonicalised?(<<_::binary>>), do: true
+  def is_canonicalised?(x) when is_number(x), do: true
+  def is_canonicalised?([]), do: true
+  def is_canonicalised?([x | rest]), do: is_canonicalised?(x) && is_canonicalised?(rest)
+  def is_canonicalised?(_), do: false
+
+  @doc """
+    Preventing canonicalisation bugs by ordering maps lexicographically into a
     list. NB! This makes it so that list representations of JSON objects are
     also accepted by verifiers, but it's OK, since no data can seemingly be
     falsified like this.
@@ -198,30 +219,30 @@ defmodule DoAuth.Crypto do
     implementation, since a bug here can sabotage the security guarantees of the
     cryptographic system.
   """
-  @spec canonicalise_term(canonicalisable_value()) :: canonicalised_value()
+  @spec canonicalise_term!(canonicalisable_value()) :: canonicalised_value()
 
-  def canonicalise_term(v) when is_binary(v) or is_number(v) do
+  def canonicalise_term!(v) when is_binary(v) or is_number(v) do
     v
   end
 
-  def canonicalise_term(v) when is_atom(v) do
+  def canonicalise_term!(v) when is_atom(v) do
     Atom.to_string(v)
   end
 
-  def canonicalise_term(tau = %DateTime{}) do
+  def canonicalise_term!(%DateTime{} = tau) do
     DateTime.to_iso8601(tau)
   end
 
-  def canonicalise_term(xs = []) do
-    Enum.map(xs, fn v -> canonicalise_term(v) end)
+  def canonicalise_term!([] = xs) do
+    Enum.map(xs, fn v -> canonicalise_term!(v) end)
   end
 
-  def canonicalise_term(kv = %{}) do
+  def canonicalise_term!(%{} = kv) do
     canonicalise_term_do(Map.keys(kv) |> Enum.sort(), kv, []) |> Enum.reverse()
   end
 
-  def canonicalise_term(xs) when is_tuple(xs) do
-    canonicalise_term(Tuple.to_list(xs))
+  def canonicalise_term!(xs) when is_tuple(xs) do
+    canonicalise_term!(Tuple.to_list(xs))
   end
 
   defp canonicalise_term_do([], _, acc), do: acc
@@ -234,7 +255,7 @@ defmodule DoAuth.Crypto do
         x
       end
 
-    canonicalise_term_do(rest, kv, [[x_canonicalised, canonicalise_term(kv[x])] | acc])
+    canonicalise_term_do(rest, kv, [[x_canonicalised, canonicalise_term!(kv[x])] | acc])
   end
 
   @doc """

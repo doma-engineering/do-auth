@@ -37,6 +37,8 @@ defmodule DoAuth.MixProject do
       {:phoenix_ecto, "~> 4.1"},
       {:ecto_sql, "~> 3.4"},
       {:enacl, "~> 1.2.0"},
+      {:ex_doc, "~> 0.22", only: :dev, runtime: false},
+      {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.1.0", [runtime: false]},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 2.11"},
