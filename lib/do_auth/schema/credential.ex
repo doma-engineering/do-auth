@@ -68,17 +68,12 @@ defmodule DoAuth.Schema.Credential do
       ) do
     try do
       case Repo.transaction(fn ->
-             require Logger
              tau0 = with_opts_get_timestamp(opts)
 
-             Logger.warn("Tick")
              did = DID.one_by_pk!(pk)
-             Logger.warn("Tack")
 
              issuer = Issuer.sin_one_did!(did)
-             Logger.warn("Quack")
              subject = Subject.sin_any_credential_subject!(credential_subject)
-             Logger.warn("Duck")
 
              cred_so_far = %__MODULE__{
                contexts: [],
@@ -89,10 +84,7 @@ defmodule DoAuth.Schema.Credential do
                misc: misc
              }
 
-             Logger.warn("Puck, #{inspect(cred_so_far, pretty: true)}")
-
-             sig64 = with_keypair_and_opts_get_signature64(kp, opts, cred_so_far)
-             Logger.warn("Guack")
+             sig64 = mk_signature_with_opts(kp, cred_so_far, opts) |> Crypto.show()
 
              {:ok, cred} =
                %{cred_so_far | proof: Proof.from_signature64!(issuer, sig64)}
@@ -104,7 +96,7 @@ defmodule DoAuth.Schema.Credential do
         err -> err
       end
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 
@@ -162,20 +154,13 @@ defmodule DoAuth.Schema.Credential do
           timestamp: timestamp
         } = _cred
       ) do
-    require Logger
-
-    Logger.warn("Hoogak ")
-
-    val = %{
+    %{
       "@context" => ctxs,
       "type" => ts,
       "issuer" => Issuer.to_string(issuer),
       "issuanceDate" => timestamp,
       "credentialSubject" => Subject.to_map(subject)
     }
-
-    Logger.warn("Doran, #{inspect(val)}")
-    val
   end
 
   defp with_opts_get_timestamp(opts) do
@@ -186,21 +171,15 @@ defmodule DoAuth.Schema.Credential do
     end
   end
 
-  defp with_keypair_and_opts_get_signature64(kp, opts, cred_so_far) do
+  defp mk_signature_with_opts(kp, cred_so_far, opts) do
     if Keyword.has_key?(opts, :signature) do
       opts[:signature]
     else
-      cano =
-        cred_so_far
-        |> to_claim_map()
-        |> Crypto.canonicalise_term!()
-
-      require Logger
-
-      Logger.warn("CCCCCCCCC #{inspect(cano)}")
-
-      cano
-      |> Proof.canonical_sign64!(kp)
+      cred_so_far
+      |> to_claim_map()
+      |> Crypto.canonicalise_term!()
+      |> Proof.canonical_sign!(kp)
+      |> Map.get(:signature)
     end
   end
 end

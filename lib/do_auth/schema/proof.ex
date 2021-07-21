@@ -3,7 +3,7 @@ defmodule DoAuth.Schema.Proof do
   Funcitons required to take a proofless credential and make it verifiable.
   """
   use DoAuth.Boilerplate.DatabaseStuff
-  alias DoAuth.Crypto
+  alias DoAuth.{Crypto, Cat}
 
   schema "proofs" do
     belongs_to(:verification_method, Issuer)
@@ -12,29 +12,79 @@ defmodule DoAuth.Schema.Proof do
     field(:timestamp, :utc_datetime, read_after_writes: true)
   end
 
+  @spec to_map(%__MODULE__{}) :: map()
+  def to_map(%__MODULE__{
+        verification_method: verification_method,
+        signature: signature,
+        timestamp: timestamp
+      }) do
+    %{
+      "verificationMethod" => Issuer.to_string(verification_method),
+      "signature" => signature,
+      "timestamp" => timestamp
+    }
+  end
+
   @spec canonical_sign!(Crypto.canonicalised_value(), Crypto.keypair()) :: Crypto.detached_sig()
   def canonical_sign!(canonical_term, kp) do
-    canonical_term |> Jason.encode!() |> Crypto.sign(kp)
+    {:ok, res} = canonical_sign(canonical_term, kp)
+    res
   end
 
   @spec canonical_sign(Crypto.canonicalised_value(), Crypto.keypair()) ::
-          {:ok, String.t()} | {:error, any()}
+          {:ok, Crypto.detached_sig()} | {:error, any()}
   def canonical_sign(canonical_term, kp) do
     try do
       true = Crypto.is_canonicalised?(canonical_term)
-      {:ok, canonical_sign!(canonical_term, kp)}
+      {:ok, canonical_term |> Jason.encode!() |> Crypto.sign(kp)}
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 
-  @spec canonical_sign64!(Crypto.canonicalised_value(), Crypto.keypair()) :: String.t()
-  def canonical_sign64!(canonical_term, kp),
-    do: canonical_sign!(canonical_term, kp)[:signature] |> Crypto.show()
+  @spec canonical_sign64!(Crypto.canonicalised_value(), Crypto.keypair()) :: Crypto.detached_sig()
+  def canonical_sign64!(canonical_term, kp64) do
+    {:ok, res} = canonical_sign64(canonical_term, kp64)
+    res
+  end
+
+  @spec canonical_sign64(Crypto.canonicalised_value(), Crypto.keypair()) ::
+          {:ok, Crypto.detached_sig()} | {:error, any()}
+  def canonical_sign64(canonical_term, kp64) do
+    case Cat.fmap(kp64, &Crypto.show(&1)) do
+      {:ok, kp} ->
+        canonical_sign(canonical_term, kp)
+
+      {:error, e} ->
+        {:error, %{"failed to fmap Crypto.show onto kp64" => kp64, "error reported" => e}}
+    end
+  end
+
+  @spec canonical_verify64(Crypto.canonicalised_value(), Crypto.detached_sig()) ::
+          {:ok, boolean()} | {:error, any()}
+  def canonical_verify64(canonicalised_value, detached_sig64) do
+    try do
+      true = Crypto.is_canonicalised?(canonicalised_value)
+
+      {:ok,
+       Crypto.verify(
+         canonicalised_value |> Jason.encode!(),
+         Cat.fmap!(detached_sig64, &Crypto.read!(&1))
+       )}
+    rescue
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
+    end
+  end
+
+  @spec canonical_verify64!(Crypto.canonicalised_value(), Crypto.detached_sig()) :: boolean()
+  def canonical_verify64!(canonicalised_value, detached_sig64) do
+    {:ok, res} = canonical_verify64(canonicalised_value, detached_sig64)
+    res
+  end
 
   @spec from_signature64(%Issuer{}, String.t()) :: {:ok, %__MODULE__{}} | {:error, any()}
   def from_signature64(issuer, sig64) do
-    build_from_signature64(issuer, sig64) |> Repo.insert()
+    build_from_signature64(issuer, sig64) |> Repo.insert() |> preload()
   end
 
   @spec from_signature64!(%Issuer{}, String.t()) :: %__MODULE__{}
@@ -60,5 +110,25 @@ defmodule DoAuth.Schema.Proof do
     proof_schema
     |> cast(third_party_data, [:signature, :verification_method_id])
     |> validate_required([:signature, :verification_method_id])
+  end
+
+  @spec build_preload :: [
+          :issuer | {:credential, [:contexts | :subject | :types | [...], ...]},
+          ...
+        ]
+  def build_preload() do
+    [verification_method: Issuer.build_preload(), credential: Credential.build_preload()]
+  end
+
+  @spec preload({:ok, %__MODULE__{}} | {:error, any()} | [%__MODULE__{}] | %__MODULE__{}) ::
+          %__MODULE__{}
+          | [%__MODULE__{}]
+          | {:ok, %__MODULE__{} | [%__MODULE__{}]}
+          | {:error, any()}
+  def preload({:error, _} = e), do: e
+  def preload({:ok, proof}), do: {:ok, preload(proof)}
+
+  def preload(proof) do
+    proof |> Repo.preload(build_preload())
   end
 end

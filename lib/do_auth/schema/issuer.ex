@@ -15,7 +15,7 @@ defmodule DoAuth.Schema.Issuer do
     try do
       {:ok, sin_one_did!(did)}
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 

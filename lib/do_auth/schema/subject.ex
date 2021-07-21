@@ -1,9 +1,10 @@
 defmodule DoAuth.Schema.Subject do
   @moduledoc """
   Credential subjects are just free-form claims in DoAuth thus far.
+  This choice wasn't made to increase already present confusion in specification-readers between "credential subject" as in "the protagonist of a credential" (the intended meaning) and "subject" as in "the topic of a credential" (the unintended meaning).
+  Instead, we simply can't be bothered to import all the DIDs in our database and for our purposes, it feels rather silly to attempt it at this point.
 
-  Management of obligatory fields is deferred to modules and systems using
-  DoAuth to implement authentication and authorization protocols.
+  This is why, at this point, management of obligatory fields and matters of maintaining DID archive is deferred to modules and systems using DoAuth to implement authentication and authorization protocols.
   """
   use DoAuth.Boilerplate.DatabaseStuff
 
@@ -17,7 +18,7 @@ defmodule DoAuth.Schema.Subject do
     try do
       {:ok, sin_any_credential_subject!(credential_subject)}
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 

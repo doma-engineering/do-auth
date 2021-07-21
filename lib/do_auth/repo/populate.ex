@@ -41,10 +41,7 @@ defmodule DoAuth.Repo.Populate do
         Repo.transaction(fn ->
           pk64 = kp.public |> Crypto.show()
 
-          require Logger
-          Logger.warn("Beep")
           %Issuer{} = DID.sin_one_pk64!(pk64) |> Issuer.sin_one_did!()
-          Logger.warn("Boop")
 
           credential =
             case Subject.all_by_credential_subject(%{"me" => pk64}) do
@@ -57,8 +54,6 @@ defmodule DoAuth.Repo.Populate do
               _ ->
                 raise "Server key is added more than once. It shouldn't be possible, and signals some serious tampering."
             end
-
-          Logger.warn("HUGE SUCCESS #{inspect(credential |> Credential.preload(), pretty: true)}")
 
           credential
         end)

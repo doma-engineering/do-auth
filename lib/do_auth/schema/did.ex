@@ -20,7 +20,7 @@ defmodule DoAuth.Schema.DID do
     try do
       {:ok, sin_one_pk64!(pk64)}
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 
@@ -42,7 +42,7 @@ defmodule DoAuth.Schema.DID do
         end
       end)
 
-    did
+    did |> preload()
   end
 
   @spec to_map(%__MODULE__{}, list()) :: map()
@@ -54,6 +54,73 @@ defmodule DoAuth.Schema.DID do
 
   def to_map(%__MODULE__{method: method, body: body, path: path}, _opts) do
     %{"method" => method, "body" => body, "path" => path}
+  end
+
+  @spec orphaned_from_string!(String.t()) :: %__MODULE__{}
+  def orphaned_from_string!(did_str) do
+    %URI{scheme: "did", path: method_body_path, query: _q, fragment: _frag} = URI.parse(did_str)
+    [method, body_path] = method_body_path |> String.split(":")
+    [body | path] = body_path |> String.split("/")
+
+    path =
+      case path do
+        [] -> ""
+        _ -> "/" <> Enum.join(path, "/")
+      end
+
+    %__MODULE__{method: method, body: body, path: path, misc: %{}}
+  end
+
+  @spec string_to_map!(String.t()) :: map()
+  def string_to_map!(did_str), do: did_str |> orphaned_from_string!() |> to_map()
+
+  @spec build_by_string(String.t()) :: Ecto.Query.t()
+  def build_by_string(did_string) do
+    try do
+      did_string |> string_to_map!() |> build_by_map()
+    rescue
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
+    end
+  end
+
+  @spec all_by_string(String.t()) :: [%__MODULE__{}]
+  def all_by_string(did_string) do
+    build_by_string(did_string) |> Repo.all() |> preload()
+  end
+
+  @spec build_by_map(map) :: Ecto.Query.t()
+  def build_by_map(%{"method" => method, "body" => body, "path" => _path}) do
+    from(q in build_by_body(body),
+      # and
+      where: q.method == ^method
+      # (fragment("? = ?", q.path, ^path) or fragment("? = ?", q.path, nil))
+    )
+  end
+
+  @spec all_by_map(map) :: %__MODULE__{}
+  def all_by_map(did_map) do
+    build_by_map(did_map) |> Repo.all() |> preload()
+  end
+
+  @spec build_by_body(String.t()) :: Ecto.Query.t()
+  def build_by_body(body) do
+    from(d in __MODULE__, where: d.body == ^body)
+  end
+
+  @spec all_by_body(String.t()) :: {:ok, %__MODULE__{}} | {:error, any()}
+  def all_by_body(body) do
+    build_by_body(body) |> Repo.all() |> preload()
+  end
+
+  @spec one_by_body(String.t()) :: {:ok, %__MODULE__{}} | {:error, any()}
+  def one_by_body(body) do
+    from(q in build_by_body(body), where: q.path == []) |> Repo.one() |> preload()
+  end
+
+  @spec one_by_body!(String.t()) :: %__MODULE__{}
+  def one_by_body!(body) do
+    {:ok, res} = one_by_body(body)
+    res
   end
 
   @spec to_string(%DoAuth.Schema.DID{}) :: String.t()
@@ -130,7 +197,10 @@ defmodule DoAuth.Schema.DID do
   end
 
   @spec preload({:ok, %__MODULE__{}} | {:error, any()} | [%__MODULE__{}] | %__MODULE__{}) ::
-          %__MODULE__{} | [%__MODULE__{}]
+          %__MODULE__{}
+          | [%__MODULE__{}]
+          | {:ok, %__MODULE__{} | [%__MODULE__{}]}
+          | {:error, any()}
   def preload({:error, e}), do: {:error, e}
   def preload({:ok, did}), do: {:ok, preload(did)}
 

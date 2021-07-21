@@ -4,6 +4,8 @@ defmodule DoAuth.Crypto do
   server parts of the protocol.
   """
 
+  use DoAuth.Boilerplate.DatabaseStuff
+
   alias :enacl, as: C
 
   @typedoc """
@@ -61,6 +63,11 @@ defmodule DoAuth.Crypto do
   what's public key.
   """
   @type keypair :: %{secret: binary(), public: binary()}
+
+  @typedoc """
+  A keypair that maybe has its secret component omitted.
+  """
+  @type keypair_opt :: %{optional(:secret) => binary(), :public => binary()}
 
   @typedoc """
   Marked private (secret) key.
@@ -151,6 +158,141 @@ defmodule DoAuth.Crypto do
   end
 
   @doc """
+  Verifies a map that has a proof embedded into it by converting said object into a map, deleting embedding, canonicalising the result and verifying the result against the embedding.
+  This function is configurable via options and has the following options:
+   * :proof_field - which field carries the embedded proof. Defaults to "proof"
+   * :signature_field - which field carries the detached signature. Defaults to "signature"
+   * :key_extractor - a function that retreives public key needed to verify embedded proof. Defaults to taking 0th element of DID.all_by_string ran against "verificationMethod" field of the proof object.
+  As per https://www.w3.org/TR/vc-data-model/, proof object may be a list, this function accounts for it.
+  It uses Elixir's Result / Either convention and returns either {:ok, true} or {:error, any()}. Exceptions are wrapped in :error tuple and aren't re-raised.
+  """
+  @spec verify_map(map(), list()) :: {:error, any()} | {:ok, true}
+  def verify_map(
+        verifiable_map,
+        opts \\ [
+          proof_field: "proof",
+          signature_field: "signature",
+          key_extractor: fn proof ->
+            (Map.get(proof, "verificationMethod")
+             |> DID.all_by_string())[0][:key][:public_key]
+          end
+        ]
+      ) do
+    try do
+      verifiable_canonical =
+        verifiable_map
+        |> Map.delete(opts[:proof_field])
+        |> canonicalise_term!()
+
+      proofs =
+        case Map.get(verifiable_map, opts[:proof_field]) do
+          proofs = [_ | _] -> proofs
+          [] -> throw(%{"argument error" => %{"empty proof list" => verifiable_map}})
+          proof -> [proof]
+        end
+
+      case Enum.reduce_while(proofs, false, fn proof, _ ->
+             detached_sig = %{
+               public: opts[:key_extractor].(proof),
+               signature: Map.get(proof, opts[:signature])
+             }
+
+             is_valid = verify(verifiable_canonical |> Jason.encode!(), detached_sig)
+
+             if is_valid do
+               {:cont, true}
+             else
+               {:halt,
+                %{
+                  "signature verification failed" => %{
+                    "verifiable object" => verifiable_map,
+                    "canonical representation" => verifiable_canonical,
+                    "detached signature" => detached_sig
+                  }
+                }}
+             end
+           end) do
+        true -> {:ok, true}
+        e -> {:error, e}
+      end
+    rescue
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
+    end
+  end
+
+  @doc """
+  Signs a map and embeds detached signature into it.
+  This function is configurable via options and has the following options:
+   * :proof_field - which field carries the embedded proof. Defaults to "proof".
+   * :signature_field - which field of the proof carries the detached signature. Defaults to "signature".
+   * :signature - if present, this function won't use :secret from keypair, but instead will add this signature verbatim. No verification shall be conducted in case the signature provided is invalid!
+   * :key_field - which field of the proof stores information related to key retrieval. Defaults to "verificationMethod".
+   * :key_field_constructor - a function that takes the public key and options and constructs value for :key_field, perhaps stateful. By default it queries for a DID corresponding to the key and returns its string representation.
+   * :if_did_missing - if set to :insert, default key constructor will insert a new DID, otherwise will error out. By default set to :fail.
+  """
+  @spec sign_map(keypair_opt(), map(), list(), list()) :: {:error, any()} | {:ok, map()}
+  def sign_map(
+        kp,
+        to_prove,
+        overrides \\ [],
+        defopts \\ sign_map_def_opts()
+      ) do
+    try do
+      opts = Keyword.merge(defopts, overrides)
+
+      %{signature: sig, public: pk} =
+        to_prove |> canonicalise_term!() |> Proof.canonical_sign!(kp)
+
+      {:ok, did} = opts[:key_field_constructor].(pk, opts)
+
+      issuer = Issuer.sin_one_did!(did)
+
+      proof_map = Proof.from_signature64!(issuer, sig |> show()) |> Proof.to_map()
+
+      {:ok, Map.put(to_prove, opts[:proof_field], proof_map)}
+    rescue
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
+    end
+  end
+
+  @spec sign_map!(keypair_opt(), map(), list(), list()) :: map
+  def sign_map!(kp, to_prove, overrides \\ [], defopts \\ sign_map_def_opts()) do
+    {:ok, res} = sign_map(kp, to_prove, overrides, defopts)
+    res
+  end
+
+  @spec sign_map_def_opts :: [
+          {:key_field_constructor, (any, any -> any)}
+          | {:key_field, <<_::144>>}
+          | {:proof_field, <<_::40>>}
+          | {:signature_field, <<_::72>>},
+          ...
+        ]
+  def sign_map_def_opts() do
+    [
+      proof_field: "proof",
+      signature_field: "signature",
+      key_field: "verificationMethod",
+      key_field_constructor: fn pk, opts ->
+        pk64 = pk |> show()
+
+        case DID.all_by_pk64(pk64) do
+          [did | _] ->
+            {:ok, did}
+
+          [] ->
+            if opts[:if_did_missing] == :insert do
+              did = DID.sin_one_pk64!(pk64)
+              {:ok, did}
+            else
+              {:error, %{"won't insert a missing DID" => %{"pk" => pk, "opts" => opts}}}
+            end
+        end
+      end
+    ]
+  end
+
+  @doc """
   Keyed (salted) generic hash of an iolist, represented as a URL-safe Base64 string.
   The key is obtained from the application configuration's paramterer "hash_salt".
   Note: this parameter is expected to be long-lived and secret.
@@ -190,7 +332,12 @@ defmodule DoAuth.Crypto do
   Non-exploding version of read.
   """
   @spec read(String.t()) :: {:ok, binary()} | {:error, any()}
-  def read(x), do: Base.url_decode64(x)
+  def read(x) do
+    case Base.url_decode64(x) do
+      res = {:ok, _} -> res
+      :error -> {:error, %{"url_decode64 failure" => x}}
+    end
+  end
 
   @spec canonicalise_term(canonicalisable_value()) ::
           {:ok, canonicalised_value()} | {:error, any()}
@@ -198,7 +345,7 @@ defmodule DoAuth.Crypto do
     try do
       {:ok, canonicalise_term!(x)}
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 

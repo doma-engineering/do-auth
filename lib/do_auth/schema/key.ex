@@ -16,7 +16,7 @@ defmodule DoAuth.Schema.Key do
     try do
       {:ok, sin_one_pk64!(pk64)}
     rescue
-      e -> {:error, e}
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 
@@ -26,10 +26,10 @@ defmodule DoAuth.Schema.Key do
       Repo.transaction(fn ->
         case all_by_pk64(pk64) do
           [] ->
-            Key.from_pk64!(pk64)
+            Key.from_pk64!(pk64) |> preload()
 
           [x = %Key{}] ->
-            x
+            x |> preload()
 
           _ ->
             raise {"Expected at most one existing Key tracking the following URLSAFE BASE64 public key",
@@ -77,5 +77,22 @@ defmodule DoAuth.Schema.Key do
     key_schema
     |> cast(third_party_data, [:public_key, :purpose])
     |> validate_required(:public_key)
+  end
+
+  @spec build_preload() :: [:dids, ...]
+  def build_preload() do
+    [:dids]
+  end
+
+  @spec preload({:ok, %__MODULE__{}} | {:error, any()} | [%__MODULE__{}] | %__MODULE__{}) ::
+          %__MODULE__{}
+          | [%__MODULE__{}]
+          | {:ok, %__MODULE__{} | [%__MODULE__{}]}
+          | {:error, any()}
+  def preload({:error, _} = e), do: e
+  def preload({:ok, key}), do: {:ok, preload(key)}
+
+  def preload(keys) do
+    keys |> Repo.preload(build_preload())
   end
 end
