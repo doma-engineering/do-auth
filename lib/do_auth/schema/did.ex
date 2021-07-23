@@ -15,6 +15,21 @@ defmodule DoAuth.Schema.DID do
     has_one(:issuer, Issuer)
   end
 
+  @spec sin_one_pk(String.t()) :: {:ok, %__MODULE__{}} | {:error, any()}
+  def sin_one_pk(pk) do
+    try do
+      {:ok, sin_one_pk64!(pk |> Crypto.show())}
+    rescue
+      e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
+    end
+  end
+
+  @spec sin_one_pk!(String.t()) :: %__MODULE__{}
+  def sin_one_pk!(pk) do
+    {:ok, res} = sin_one_pk(pk)
+    res
+  end
+
   @spec sin_one_pk64(String.t()) :: {:ok, %__MODULE__{}} | {:error, any()}
   def sin_one_pk64(pk64) do
     try do

@@ -9,38 +9,50 @@ defmodule DoAuth.Invite do
   use DoAuth.Boilerplate.DatabaseStuff
   alias DoAuth.{Crypto, Presentation}
 
-  @spec grant(%DID{}, pos_integer()) :: {:ok, %Credential{}} | {:error, any()}
-  def grant(did, n) do
+  @spec grant(%DID{}, pos_integer(), list()) :: {:ok, %Credential{}} | {:error, any()}
+  def grant(did, n, opts \\ []) do
     try do
-      {:ok, grant!(did, n)}
+      {:ok, grant!(did, n, opts)}
     rescue
       e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
   end
 
-  @spec grant!(%DID{}, pos_integer()) :: %Credential{}
-  def grant!(%DID{} = did, n) do
-    Credential.transact_with_keypair_from_subject_map!(
-      Crypto.server_keypair(),
-      %{
-        "kind" => "invite",
-        "capacity" => n,
-        "holder" => DID.to_string(did)
-      },
-      %{
-        "location" =>
-          "/invites/" <>
-            Crypto.salted_hash(
-              ~s(invite|#{inspect(n)}|#{DID.to_string(did)}|#{inspect(DateTime.utc_now())})
-            )
-      }
-    )
+  @spec grant!(%DID{}, pos_integer(), map(), list()) :: %Credential{}
+  def grant!(%DID{} = did, n, misc \\ %{}, opts \\ []) do
+    with kp <- Crypto.server_keypair() do
+      invite =
+        Credential.transact_with_keypair_from_subject_map!(
+          kp,
+          %{
+            "kind" => "invite",
+            "capacity" => n,
+            "holder" => DID.to_string(did)
+          },
+          Map.merge(
+            %{
+              "location" =>
+                "/invites/" <>
+                  Crypto.salted_hash(
+                    ~s(invite|#{inspect(n)}|#{DID.to_string(did)}|#{inspect(DateTime.utc_now())})
+                  )
+            },
+            misc
+          ),
+          opts
+        )
+        |> Credential.to_map()
+
+      {:ok, res} = Presentation.present_credential_map(kp, invite)
+      res
+    end
   end
 
   @spec fulfill(String.t(), map()) :: any()
   def fulfill(pk64, %{} = invite_presentation_map) do
     try do
       %{} = invite_map = invite_presentation_map["verifiableCredential"]
+      {:ok, true} = Crypto.verify_map(invite_presentation_map)
       true = is_presentation_vacant(invite_presentation_map)
 
       case Presentation.verify_presentation_map(invite_presentation_map) do
@@ -89,8 +101,8 @@ defmodule DoAuth.Invite do
       0 ==
         from(s in Subject,
           where:
-            fragment(~s(? ->> 'signature' = ?), s.claim, ^signature) and
-              fragment(~s(? ->> 'kind' = ?), s.claim, "decrement")
+            fragment(~s(? ->> 'signature' = ?), s.subject, ^signature) and
+              fragment(~s(? ->> 'kind' = ?), s.subject, "decrement")
         )
         |> Repo.aggregate(:count)
   end
@@ -98,11 +110,11 @@ defmodule DoAuth.Invite do
   defp is_vacant(%{} = credential_map) do
     invite_id = Map.get(credential_map, "id")
 
-    Map.get(credential_map, "capacity", -1) >
+    credential_map |> Map.get("credentialSubject") |> Map.get("capacity", -1) >
       from(s in Subject,
         where:
-          fragment(~s(? ->> 'parent' = ?), s.claim, ^invite_id) and
-            fragment(~s(? ->> 'kind' = ?), s.claim, "decrement")
+          fragment(~s(? ->> 'parent' = ?), s.subject, ^invite_id) and
+            fragment(~s(? ->> 'kind' = ?), s.subject, "decrement")
       )
       |> Repo.aggregate(:count)
   end
@@ -110,7 +122,7 @@ defmodule DoAuth.Invite do
   defp is_issued_by_us(%{} = credential_map) do
     %{public: pk} = Crypto.server_keypair()
     did = DID.one_by_pk!(pk)
-    credential_map["issuer"] == did
+    credential_map["issuer"] == did |> DID.to_string()
   end
 
   defp is_presenter_the_holder(presentation_map) do
@@ -124,25 +136,28 @@ defmodule DoAuth.Invite do
 
   defp is_contemporary(credential_map) do
     tau0 = Repo.now()
+    g = &Map.get(credential_map, &1, &2)
 
-    effective_date_str =
-      Map.get(credential_map, "effectiveDate", Map.get(credential_map, "issuanceDate", {}))
+    valid_from = g.("validFrom", g.("effectiveDate", g.("issuanceDate", nil)))
 
-    expiration_date_str = Map.get(credential_map, "expirationDate", {})
+    valid_until = g.("validUntil", g.("expirationDate", nil))
 
     true =
-      if effective_date_str == {} do
-        throw(ArgumentError)
+      if valid_from == nil do
+        throw(ArgumentError.message(%{message: "issuanceDate is missing"}))
       else
-        {:ok, effective_date, _} = DateTime.from_iso8601(effective_date_str)
-        tau0 >= effective_date
+        {:ok, valid_from, 0} = valid_from |> DateTime.from_iso8601()
+        tau0 >= valid_from
       end
 
-    if expiration_date_str == {} do
-      true
-    else
-      {:ok, expiration_date, _} = DateTime.from_iso8601(expiration_date_str)
-      tau0 <= expiration_date
-    end
+    true =
+      if valid_until == nil do
+        true
+      else
+        {:ok, valid_until, 0} = valid_until |> DateTime.from_iso8601()
+        tau0 <= valid_until
+      end
+
+    true
   end
 end

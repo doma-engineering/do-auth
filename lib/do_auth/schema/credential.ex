@@ -4,7 +4,7 @@ defmodule DoAuth.Schema.Credential do
   """
 
   use DoAuth.Boilerplate.DatabaseStuff
-  alias DoAuth.{Crypto}
+  alias DoAuth.{Crypto, Cat}
 
   schema "credentials" do
     belongs_to(:issuer, Issuer)
@@ -64,37 +64,47 @@ defmodule DoAuth.Schema.Credential do
         %{public: pk} = kp,
         %{} = credential_subject,
         %{} = misc,
-        [] = opts
-      ) do
+        opts
+      )
+      when is_list(opts) do
     try do
-      case Repo.transaction(fn ->
-             tau0 = with_opts_get_timestamp(opts)
+      Repo.transaction(fn ->
+        tau0 = with_opts_get_timestamp(opts)
 
-             did = DID.one_by_pk!(pk)
+        did = DID.one_by_pk!(pk)
 
-             issuer = Issuer.sin_one_did!(did)
-             subject = Subject.sin_any_credential_subject!(credential_subject)
+        issuer = Issuer.sin_one_did!(did)
+        subject = Subject.sin_any_credential_subject!(credential_subject)
 
-             cred_so_far = %__MODULE__{
-               contexts: [],
-               types: [],
-               issuer: issuer,
-               timestamp: tau0,
-               subject: subject,
-               misc: misc
-             }
+        cred_so_far =
+          to_claim_map(
+            %__MODULE__{
+              contexts: [],
+              types: [],
+              issuer: issuer,
+              timestamp: tau0,
+              subject: subject,
+              misc: misc
+            },
+            opts
+          )
 
-             sig64 = mk_signature_with_opts(kp, cred_so_far, opts) |> Crypto.show()
+        sig64 = mk_signature_with_opts(kp, cred_so_far, opts) |> Crypto.show()
 
-             {:ok, cred} =
-               %{cred_so_far | proof: Proof.from_signature64!(issuer, sig64)}
-               |> Repo.insert(returning: true)
+        {:ok, cred} =
+          %__MODULE__{
+            contexts: Map.get(cred_so_far, "@context"),
+            types: Map.get(cred_so_far, "type"),
+            issuer: issuer,
+            timestamp: tau0,
+            subject: subject,
+            misc: misc,
+            proof: Proof.from_signature64!(issuer, sig64)
+          }
+          |> Repo.insert(returning: true)
 
-             cred
-           end) do
-        {:ok, cred} -> {:ok, cred |> preload()}
-        err -> err
-      end
+        cred |> preload()
+      end)
     rescue
       e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
@@ -144,23 +154,43 @@ defmodule DoAuth.Schema.Credential do
     cred |> Repo.preload(build_preload())
   end
 
-  @spec to_claim_map(%__MODULE__{}) :: map()
-  def to_claim_map(
+  def preload(cred) when is_list(cred) do
+    cred |> Repo.preload(build_preload())
+  end
+
+  @spec to_map(%DoAuth.Schema.Credential{}) :: map
+  def to_map(
         %__MODULE__{
           contexts: ctxs,
           types: ts,
           issuer: issuer,
           subject: subject,
-          timestamp: timestamp
-        } = _cred
+          timestamp: timestamp,
+          misc: misc
+        } = cred
       ) do
+    p = &Cat.put_new_value(&1, &2, &3)
+    g = &Map.get(cred, &1)
+    m = &Map.get(misc, &1)
+    pm = &Cat.put_new_value(&1, &2, Map.get(misc, &2))
+
     %{
       "@context" => ctxs,
       "type" => ts,
       "issuer" => Issuer.to_string(issuer),
-      "issuanceDate" => timestamp,
+      "issuanceDate" => DateTime.to_iso8601(timestamp),
       "credentialSubject" => Subject.to_map(subject)
     }
+    |> p.("id", m.("location"))
+    |> pm.("effectiveDate")
+    |> pm.("validFrom")
+    |> pm.("validUntil")
+    |> Cat.put_new_association("proof", g.(:proof), &Proof.to_map(&1))
+  end
+
+  @spec to_claim_map(map() | %__MODULE__{}, list()) :: map()
+  def to_claim_map(cred, _opts \\ []) do
+    to_map(cred) |> Map.delete("id") |> Map.delete("proof")
   end
 
   defp with_opts_get_timestamp(opts) do
@@ -175,9 +205,11 @@ defmodule DoAuth.Schema.Credential do
     if Keyword.has_key?(opts, :signature) do
       opts[:signature]
     else
-      cred_so_far
-      |> to_claim_map()
-      |> Crypto.canonicalise_term!()
+      canonical =
+        cred_so_far
+        |> Crypto.canonicalise_term!()
+
+      canonical
       |> Proof.canonical_sign!(kp)
       |> Map.get(:signature)
     end

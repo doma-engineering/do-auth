@@ -43,4 +43,28 @@ defmodule DoAuth.Cat do
       a__b.(a__or__f_a)
     end
   end
+
+  @doc """
+  Take a nillable value and if it's not nil, put_new it into the map under key.
+  """
+  @spec put_new_value(map(), any(), any()) :: map()
+  def put_new_value(%{} = map, key, value) do
+    if value == nil do
+      map
+    else
+      Map.put_new(map, key, value)
+    end
+  end
+
+  @doc """
+  Take a loadable value (association) and if it's loaded, put_new it into the map under key.
+  """
+  @spec put_new_association(map, any, Ecto.Association.t(), (Ecto.Association.t() -> any())) ::
+          map()
+  def put_new_association(%{} = map, key, assoc, normalise_fn) do
+    case assoc do
+      %Ecto.Association.NotLoaded{} -> map
+      value -> Map.put_new(map, key, normalise_fn.(value))
+    end
+  end
 end

@@ -42,7 +42,21 @@ defmodule DoAuth.Test.Support.Fixtures do
       end
 
       def signing_key_fixture(n) do
-        main_key_fixture() |> DoAuth.Crypto.derive_signing_keypair(n)
+        {mkey, _} = main_key_fixture()
+        mkey |> DoAuth.Crypto.derive_signing_keypair(n)
+      end
+
+      def server_keypair_fixture() do
+        %{
+          public:
+            <<196, 32, 166, 36, 137, 39, 40, 96, 191, 83, 23, 16, 117, 237, 48, 216, 144, 130,
+              252, 0, 227, 242, 122, 201, 103, 99, 10, 223, 134, 134, 84, 147>>,
+          secret:
+            <<116, 169, 57, 180, 48, 45, 29, 121, 102, 151, 192, 69, 26, 67, 112, 135, 224, 98,
+              132, 127, 118, 144, 51, 242, 29, 201, 119, 209, 92, 199, 70, 61, 196, 32, 166, 36,
+              137, 39, 40, 96, 191, 83, 23, 16, 117, 237, 48, 216, 144, 130, 252, 0, 227, 242,
+              122, 201, 103, 99, 10, 223, 134, 134, 84, 147>>
+        }
       end
     end
   end

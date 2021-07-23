@@ -8,9 +8,9 @@ defmodule DoAuth.Presentation do
   """
 
   use DoAuth.Boilerplate.DatabaseStuff
-  alias DoAuth.{Crypto}
+  alias DoAuth.{Crypto, Cat}
 
-  @spec verify_presentation_map(map()) :: {:error, any} | {:ok, true}
+  @spec verify_presentation_map(map()) :: {:error, any} | {:ok, boolean()}
   def verify_presentation_map(presentation_map) do
     Crypto.verify_map(presentation_map)
   end
@@ -25,20 +25,31 @@ defmodule DoAuth.Presentation do
           Crypto.keypair_opt(),
           %Credential{},
           list()
-        ) :: map()
-  def present_credential(%{public: pk} = kp, %Credential{} = credential, opts \\ []) do
+        ) :: {:ok, map()} | {:error, any()}
+  def present_credential(kp, %Credential{} = credential, opts \\ []) do
+    present_credential_map(kp, credential |> Credential.to_map(), opts)
+  end
+
+  @spec present_credential_map(
+          Crypto.keypair_opt(),
+          map(),
+          list()
+        ) :: {:ok, map()} | {:error, any()}
+  def present_credential_map(%{public: pk} = kp, %{} = credential_map, opts \\ []) do
     try do
+      p = &Cat.put_new_value(&1, &2, &3)
+      o = &Keyword.get(opts, &1)
       issuer = DID.one_by_pk!(pk)
-      presentation_so_far = %{"verifiableCredential" => credential, "issuer" => issuer}
 
-      presentation_so_far =
-        if opts[:holder] do
-          %{presentation_so_far | "holder" => opts[:holder]}
-        else
-          presentation_so_far
-        end
+      presentation_claim =
+        %{
+          "verifiableCredential" => credential_map,
+          "issuer" => issuer |> DID.to_string()
+        }
+        |> p.("id", o.(:location))
+        |> p.("holder", o.(:holder))
 
-      Crypto.sign_map!(kp, presentation_so_far, opts)
+      {:ok, Crypto.sign_map!(kp, presentation_claim, opts)}
     rescue
       e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end

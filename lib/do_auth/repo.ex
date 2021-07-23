@@ -14,6 +14,27 @@ defmodule DoAuth.Repo do
   end
 
   @doc """
+  PostgreSQL-compatible ISO string to DateTime.
+  """
+  @spec from_utc_iso8601(String.t()) :: {:error, any()} | {:ok, DateTime.t()}
+  def from_utc_iso8601(iso_str) do
+    case DateTime.from_iso8601(iso_str) do
+      {:ok, res, 0} -> {:ok, res |> DateTime.truncate(:second)}
+      {:error, e} -> {:error, %{"DateTime.from_iso8601 failed" => e}}
+      x -> {:error, %{"non-zero calendar offset produced, please submit a UTC timestamp" => x}}
+    end
+  end
+
+  @doc """
+  Banging version!
+  """
+  @spec from_utc_iso8601!(String.t()) :: DateTime.t()
+  def from_utc_iso8601!(iso_str) do
+    {:ok, res} = from_utc_iso8601(iso_str)
+    res
+  end
+
+  @doc """
   Validates that there is at exactly one field set in the changeset amonst
   the fields supplied.
   """

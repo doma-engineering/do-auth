@@ -6,6 +6,7 @@ defmodule DoAuth.Crypto do
 
   use DoAuth.Boilerplate.DatabaseStuff
 
+  alias DoAuth.Cat
   alias :enacl, as: C
 
   @typedoc """
@@ -160,28 +161,39 @@ defmodule DoAuth.Crypto do
   @doc """
   Verifies a map that has a proof embedded into it by converting said object into a map, deleting embedding, canonicalising the result and verifying the result against the embedding.
   This function is configurable via options and has the following options:
-   * :proof_field - which field carries the embedded proof. Defaults to "proof"
-   * :signature_field - which field carries the detached signature. Defaults to "signature"
+   * :proof_field - which field carries the embedded proof. Defaults to "proof".
+   * ignore: [] - list of fields to ignore. Defaults to ["id"].
+   * :signature_field - which field carries the detached signature. Defaults to "signature".
    * :key_extractor - a function that retreives public key needed to verify embedded proof. Defaults to taking 0th element of DID.all_by_string ran against "verificationMethod" field of the proof object.
   As per https://www.w3.org/TR/vc-data-model/, proof object may be a list, this function accounts for it.
   It uses Elixir's Result / Either convention and returns either {:ok, true} or {:error, any()}. Exceptions are wrapped in :error tuple and aren't re-raised.
   """
-  @spec verify_map(map(), list()) :: {:error, any()} | {:ok, true}
+  @spec verify_map(map(), list(), list()) :: {:error, any()} | {:ok, true}
   def verify_map(
-        verifiable_map,
-        opts \\ [
+        %{} = verifiable_map,
+        overrides \\ [],
+        defaults \\ [
           proof_field: "proof",
           signature_field: "signature",
           key_extractor: fn proof ->
-            (Map.get(proof, "verificationMethod")
-             |> DID.all_by_string())[0][:key][:public_key]
-          end
+            did_str = Map.get(proof, "verificationMethod")
+            [did | _] = DID.all_by_string(did_str)
+            did.key.public_key
+          end,
+          ignore: ["id"]
         ]
       ) do
     try do
+      opts = Keyword.merge(defaults, overrides)
+
       verifiable_canonical =
-        verifiable_map
-        |> Map.delete(opts[:proof_field])
+        Enum.reduce(
+          [opts[:proof_field] | opts[:ignore]],
+          verifiable_map,
+          fn x, acc ->
+            Map.delete(acc, x)
+          end
+        )
         |> canonicalise_term!()
 
       proofs =
@@ -192,10 +204,12 @@ defmodule DoAuth.Crypto do
         end
 
       case Enum.reduce_while(proofs, false, fn proof, _ ->
-             detached_sig = %{
-               public: opts[:key_extractor].(proof),
-               signature: Map.get(proof, opts[:signature])
-             }
+             detached_sig =
+               %{
+                 public: opts[:key_extractor].(proof),
+                 signature: Map.get(proof, opts[:signature_field])
+               }
+               |> Cat.fmap!(&read!(&1))
 
              is_valid = verify(verifiable_canonical |> Jason.encode!(), detached_sig)
 
@@ -229,26 +243,32 @@ defmodule DoAuth.Crypto do
    * :key_field - which field of the proof stores information related to key retrieval. Defaults to "verificationMethod".
    * :key_field_constructor - a function that takes the public key and options and constructs value for :key_field, perhaps stateful. By default it queries for a DID corresponding to the key and returns its string representation.
    * :if_did_missing - if set to :insert, default key constructor will insert a new DID, otherwise will error out. By default set to :fail.
+   * ignore: [] - list of fields to omit from building a canonicalised object. Defaults to ["id"].
   """
   @spec sign_map(keypair_opt(), map(), list(), list()) :: {:error, any()} | {:ok, map()}
   def sign_map(
         kp,
-        to_prove,
+        the_map,
         overrides \\ [],
-        defopts \\ sign_map_def_opts()
+        defaults \\ sign_map_def_opts()
       ) do
     try do
-      opts = Keyword.merge(defopts, overrides)
+      opts = Keyword.merge(defaults, overrides)
 
-      %{signature: sig, public: pk} =
-        to_prove |> canonicalise_term!() |> Proof.canonical_sign!(kp)
+      to_prove =
+        Enum.reduce(
+          opts[:ignore],
+          the_map,
+          fn x, acc ->
+            Map.delete(acc, x)
+          end
+        )
 
+      canonical_claim = to_prove |> canonicalise_term!()
+      %{signature: sig, public: pk} = canonical_claim |> Proof.canonical_sign!(kp)
       {:ok, did} = opts[:key_field_constructor].(pk, opts)
-
       issuer = Issuer.sin_one_did!(did)
-
       proof_map = Proof.from_signature64!(issuer, sig |> show()) |> Proof.to_map()
-
       {:ok, Map.put(to_prove, opts[:proof_field], proof_map)}
     rescue
       e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
@@ -288,7 +308,8 @@ defmodule DoAuth.Crypto do
               {:error, %{"won't insert a missing DID" => %{"pk" => pk, "opts" => opts}}}
             end
         end
-      end
+      end,
+      ignore: ["id"]
     ]
   end
 
@@ -367,7 +388,6 @@ defmodule DoAuth.Crypto do
     cryptographic system.
   """
   @spec canonicalise_term!(canonicalisable_value()) :: canonicalised_value()
-
   def canonicalise_term!(v) when is_binary(v) or is_number(v) do
     v
   end
@@ -412,16 +432,22 @@ defmodule DoAuth.Crypto do
   """
   @spec server_keypair :: keypair()
   def server_keypair() do
-    with slip <-
-           %{
-             mem: :moderate,
-             ops: :moderate,
-             salt: <<84, 5, 187, 21, 147, 222, 144, 242, 242, 64, 139, 14, 25, 160, 85, 88>>
-           } do
-      Application.get_env(:do_auth, DoAuth.Web)
-      |> Keyword.get(:secret_key_base, "")
-      |> main_key_reproduce(slip)
-      |> derive_signing_keypair(1)
+    kp_maybe = Application.get_env(:do_auth, DoAuth.Crypto) |> Keyword.get(:server_keypair, {})
+
+    if kp_maybe == {} do
+      with slip <-
+             %{
+               mem: :moderate,
+               ops: :moderate,
+               salt: <<84, 5, 187, 21, 147, 222, 144, 242, 242, 64, 139, 14, 25, 160, 85, 88>>
+             } do
+        Application.get_env(:do_auth, DoAuth.Web)
+        |> Keyword.get(:secret_key_base, "")
+        |> main_key_reproduce(slip)
+        |> derive_signing_keypair(1)
+      end
+    else
+      kp_maybe
     end
   end
 

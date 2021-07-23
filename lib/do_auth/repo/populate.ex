@@ -89,7 +89,7 @@ defmodule DoAuth.Repo.Populate do
 
     case q0 |> Repo.all() do
       [] ->
-        Invite.grant!(did_stored, Application.get_env(:do_auth, :default_root_invites))
+        Invite.grant!(did_stored, Application.get_env(:do_auth, :default_root_invites, 100))
 
       [x = %Subject{}] ->
         Credential.one_by_subject_id!(x.id)
