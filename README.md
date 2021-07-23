@@ -30,6 +30,35 @@ Given criminal lack of types in Elixir (is Gleam a 1.0 candidate?), we resort to
 
 Schemas map to PgSQL table definitions and often diverge from the standard. Some of these divergences are by design, while some are stemming from incremental implementation route that we took in DoAuth.
 
+### Query builders and runners 
+
+### preload and build\_preload
+
+### [Seven deadly `sin`s](https://www.youtube.com/watch?v=A6n-m57dtsA)
+
+We use an anti-pattern called "select or insert" (short: `sin`) for many things. On Sat Jul 24 00:49:37 BST 2021, here's the list of things we have `sin`s implemented for:
+
+```
+sweater@conflagrate:~/srht/do-auth$ rg 'def sin_'
+lib/do_auth/schema/issuer.ex
+14:  def sin_one_did(did) do
+
+lib/do_auth/schema/key.ex
+15:  def sin_one_pk64(pk64) do
+
+lib/do_auth/schema/subject.ex
+17:  def sin_any_credential_subject(credential_subject) do
+
+lib/do_auth/schema/did.ex
+19:  def sin_one_pk(pk) do
+34:  def sin_one_pk64(pk64) do
+```
+
+The biggest problem of it, is that we don't quite understand the implications of this approach with append-only transaction-heavy postgres.
+
+Also, for naive nickserv implementation, we make a transaction that, for a short period of time when a nickname has to be registered, obtains an exclusive lock on the whole `credentials` table, which is a horrible thing to do.
+Absolutely not sure about Postgresql's execution model, so I have no idea if we really need it and how do other services register unique names concurrently.
+
 ### misc.location
 
 Particular tediousness is created by "id" fields in JSON, that -- really -- are normally just "locations" of various objects. To address this, we put what will end up to be "id" field in "misc" object of Credentials and then, as we call Credential.to_map, we retrieve it and set "id" to it.
