@@ -60,6 +60,11 @@ defmodule DoAuth.Schema.DID do
     did |> preload()
   end
 
+  @spec exists64(String.t()) :: boolean()
+  def exists64(<<did64::binary>>) do
+    0 < build_by_string(did64) |> Repo.all() |> length()
+  end
+
   @spec to_map(%__MODULE__{}, list()) :: map()
   def to_map(did_schema, opts \\ [])
 

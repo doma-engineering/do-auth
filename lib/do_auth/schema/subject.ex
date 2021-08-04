@@ -35,6 +35,29 @@ defmodule DoAuth.Schema.Subject do
     res
   end
 
+  @spec compose_by_kv(Ecto.Query.t() | atom(), String.t(), any()) :: Ecto.Query.t()
+  def compose_by_kv(query, key, value) do
+    from(s in query,
+      where:
+        fragment(
+          ~s(? ->> ? = ?),
+          s.subject,
+          ^key,
+          ^value
+        )
+    )
+  end
+
+  @spec all_by_kv(String.t(), any()) :: [%__MODULE__{}]
+  def all_by_kv(key, value) do
+    build_by_kv(key, value) |> Repo.all() |> preload()
+  end
+
+  @spec build_by_kv(String.t(), String.t()) :: Ecto.Query.t()
+  def build_by_kv(key, value) do
+    compose_by_kv(__MODULE__, key, value)
+  end
+
   @spec all_by_credential_subject(map()) :: [%__MODULE__{}]
   def all_by_credential_subject(%{} = credential_subject_map) do
     from(s in __MODULE__, where: s.subject == ^credential_subject_map) |> Repo.all()

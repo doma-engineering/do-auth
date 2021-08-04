@@ -1,6 +1,7 @@
 defmodule DoAuth.Cat do
   @moduledoc """
   Collection of funcitons that work together with standard Elixir protocols to improve UX.
+  Should really be called "Control" because it basically defines functional control structures, but oh well.
   """
 
   @doc """
@@ -67,4 +68,11 @@ defmodule DoAuth.Cat do
       value -> Map.put_new(map, key, normalise_fn.(value))
     end
   end
+
+  @doc """
+  Forgetful continuation over {:error, reason}, {:ok, _value}
+  """
+  @spec cont({:ok | :error, any()}, (() -> any())) :: {:ok | :error, any()}
+  def cont({:error, _} = e, _), do: e
+  def cont({:ok, _}, f), do: f.()
 end

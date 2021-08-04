@@ -3,7 +3,7 @@
   * Install project dependencies with `sudo apt install erlang elixir make postgresql libsodium-dev gcc g++ inotify-tools`
   * Install the correct version of `nodejs`:
     * `mkdir -p "${HOME}/.local/bin"
-    * `N\_PREFIX="${HOME}/.local" npx n install 15.8.0`
+    * `N_PREFIX="${HOME}/.local" npx n install 15.8.0`
     * `echo 'export PATH="${HOME}/.local/bin:${PATH}"' >> ~/.bashrc`
   * Install dependencies with `mix deps.get`
   * Create and migrate your database with `mix ecto.setup`
@@ -30,7 +30,7 @@ Given criminal lack of types in Elixir (is Gleam a 1.0 candidate?), we resort to
 
 Schemas map to PgSQL table definitions and often diverge from the standard. Some of these divergences are by design, while some are stemming from incremental implementation route that we took in DoAuth.
 
-### Query builders and runners 
+### Query builders and runners
 
 ### preload and build\_preload
 
@@ -79,4 +79,10 @@ These blobs are then signed.
 
 As one can imagine, combination of deviations between the standard fields and PgSQL schema together some fields (such as `id` and `proof`) being omitted from the object that is being signed, causes a lot of bugs while developing features.
 
-Currently we strive to implement enough DID/VC protocols to catch them all, validating the core functions such as `Crypto.verify\_map` and `Presentation.present\_credential\_map`.
+Currently we strive to implement enough DID/VC protocols to catch them all, validating the core functions such as `Crypto.verify_map` and `Presentation.present_credential_map`.
+
+## Continuations
+
+Please, use result tuples by default, even if your function may return `true` by default. It's useful to then ergonomically embed your functions into continuations, as seen in `DoAuth.NickServ`, for example.
+
+A prime example of not just returning `:ok` is `Crypto.verify_map`.
