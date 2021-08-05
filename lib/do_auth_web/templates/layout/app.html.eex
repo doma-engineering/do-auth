@@ -1,33 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>DoAuth · Phoenix Framework</title>
+<html>
+<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# article: http://ogp.me/ns/article#">
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>DoAuth: Reclaim your identity</title>
+
+
+    <meta name="keywords"
+        content="technology, functional programming, identity, sovereign identity, verifiable credentials" />
+    <meta name="description" content="Fast, lean and reliable authentication server based on verifiable credentials standard" />
+    <meta property="og:site_name" content="DoAuth" />
+    <meta name="theme-color" content="#161616">
+    <link href="<%= Routes.static_path(@conn, "/favicon.ico") %>" rel="shortcut icon" type="image/x-icon" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml">
+
+
+
+    <meta property="og:type" content="website">
+
+    <meta itemprop="title" content="DoAuth is a verifiable credentials server, which is a next-gen alternative to the legacy authentication systems." />
+    <meta property="og:title" content="DoAuth is a verifiable credentials server, which is a next-gen alternative to the legacy authentication systems." />
+    <meta name="twitter:title" content="DoAuth is a verifiable credentials server, which is a next-gen alternative to the legacy authentication systems.">
+
+    <meta name="twitter:image" content="<%= Routes.static_path(@conn, "/images/doauth-card.png") %>" />
+    <meta name="twitter:image:src" content="<%= Routes.static_path(@conn, "/images/doauth-card.png") %>"/>
+    <meta itemprop="image" content="<%= Routes.static_path(@conn, "/images/doauth-card.png") %>" />
+    <meta property="og:image" content="<%= Routes.static_path(@conn, "/images/doauth-card.png") %>"/>
+    <meta property="og:image_url" content="<%= Routes.static_path(@conn, "/images/doauth-card.png") %>" />
+
+    <meta itemprop="description"
+        content="DoAuth enables everyone to reclaim their identity by providing an open source authentication solution based on modern standards." />
+    <meta property="og:description"
+        content="DoAuth enables everyone to reclaim their identity by providing an open source authentication solution based on modern standards." />
+    <meta name="twitter:description"
+        content="DoAuth enables everyone to reclaim their identity by providing an open source authentication solution based on modern standards." />
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@doma_dev">
+    <meta name="twitter:creator" content="@doma_dev">
+
+
+
+    <meta property="og:url" content="https://maja.doma.dev//" />
+
+
     <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
     <script defer type="text/javascript" src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script>
-  </head>
-  <body>
-    <header>
-      <section class="container">
-        <nav role="navigation">
-          <ul>
-            <li><a href="https://hexdocs.pm/phoenix/overview.html">Get Started</a></li>
-            <%= if function_exported?(Routes, :live_dashboard_path, 2) do %>
-              <li><%= link "LiveDashboard", to: Routes.live_dashboard_path(@conn, :home) %></li>
-            <% end %>
-          </ul>
-        </nav>
-        <a href="https://phoenixframework.org/" class="phx-logo">
-          <img src="<%= Routes.static_path(@conn, "/images/doauth.png") %>" alt="DoAuth logo"/>
-        </a>
-      </section>
-    </header>
-    <main role="main" class="container">
-      <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
-      <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
-      <%= @inner_content %>
-    </main>
-  </body>
-</html>
+    <script defer src="//unpkg.com/alpinejs"></script>
+
+    <script defer data-api="https://maja.doma.dev/api/event" data-domain="maja.doma.dev"
+        src="https://maja.doma.dev/js/p_proxy.js"></script>
+</head>
