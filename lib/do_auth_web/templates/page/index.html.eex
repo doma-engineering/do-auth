@@ -1,8 +1,81 @@
-<div x-data="{ open: false }" class="flex items-center justify-center h-screen">
-  <div class="w-64" x-show="open">
-    <code class="text-dune-spice">
-    aos stuff goes here and brings the user to the interactive elements.
-    aos is shown to the user only once and the user can roll credits with some option.
-    </code>
+<div class="flex flex-col items-center justify-center h-screen">
+
+<!-- Slide 1 (motto) -->
+  <div class="flex items-center flex-grow superhero text-white">
+    <div>
+      <span data-aos="fade-in" data-aos-duration="350" data-aos-delay="0" class="font-thin">
+        reclamation
+      </span>
+      <span data-aos="fade-in" data-aos-duration="350" data-aos-delay="600" class="font-thin">
+        starts
+      </span>
+      <span data-aos="fade-in" data-aos-duration="350" data-aos-delay="1250" class="text-pink-light font-light">
+        now
+      </span>
+    </div>
+  </div>
+
+  <div>
+    <svg data-aos-delay="1200" data-aos-duration="200" data-aos="fade-in" xmlns="http://www.w3.org/2000/svg" class="animate-bounce text-grey-dark h-12 w-12 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+
+</div>
+
+<!-- Slide 2 (warranty and license) -->
+<div class="flex flex-col items-center justify-center h-screen">
+
+  <div class="flex items-center flex-grow text-white">
+    <div class="text-white">
+      DoAuth is alpha software that comes with no warranty.
+    </div>
+  </div>
+
+  <div>
+    <svg data-aos="slide-left" xmlns="http://www.w3.org/2000/svg" class="animate-bounce text-grey-dark h-12 w-12 mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+
+</div>
+
+<!-- Slide 3 (The Internet converges) -->
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-sand right-1/2" data-aos="fade-right">Alice@AOL</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-spice left-1/2" data-aos="fade-left">Bob@ICQ</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie" class="person bg-dune-spice -m-16 md:-m-32 left-1/2" data-aos="fade-right">Charlie@ICQ</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in" class="person bg-dune-sand fixed -mt-16 md:-mt-32 left-1/2 top-1/2" data-aos="fade-left">Charlie@AOL</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-dora" class="person bg-synthwave-teal -m-32 md:-m-64 left-1/2" data-aos="fade-right">Dora@Skype</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in-again" class="person bg-synthwave-teal -mt-16 md:-mt-32 left-1/2" data-aos="fade-left">Charlie@Skype</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-alice-gives-in" class="person bg-synthwave-teal right-1/2" data-aos="fade-right">Alice@Skype</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-synthwave-teal left-1/2" data-aos="fade-left">Bob@Skype</div>
+<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-black -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+
+<div class="flex flex-col items-center justify-center">
+
+  <h1 class="superhero text-white">Deferred identity centralises the Web</h1>
+
+  <div class="flex items-center flex-grow text-white">
+    <div class="space-y-0">
+      <div id="trigger-couple" class="w-0 h-96 bg-mute-light"></div>
+      <div id="trigger-charlie" class="w-0 h-96 bg-mute-dark"></div>
+      <div id="trigger-charlie-gives-in" class="w-0 h-96 bg-mute-light"></div>
+      <div id="trigger-dora" class="w-0 h-96 bg-mute-dark"></div>
+      <div id="trigger-charlie-gives-in-again" class="w-0 h-96 bg-mute-light"></div>
+      <div id="trigger-alice-is-alone" class="w-0 h-96 bg-mute-dark"></div>
+      <div id="trigger-alice-gives-in" class="w-0 h-96 bg-mute-light"></div>
+      <div id="trigger-bob-converts" class="w-0 h-96 bg-mute-dark"></div>
+    </div>
   </div>
 </div>
+
+
+<!-- Slide 4 (...) -->
+<div class="flex flex-col items-center justify-center h-screen">
+</div>
+
+
+
+<!-- Tutorial -->
+<%# <div class="w-96 h-96 ml-96 bg-dune-sun" data-aos="slide-right"></div>
+<div class="w-96 h-96 ml-96 bg-dune-spice" data-aos="slide-left"></div> %>

@@ -52,3 +52,7 @@
     <script defer data-api="https://maja.doma.dev/api/event" data-domain="maja.doma.dev"
         src="https://maja.doma.dev/js/p_proxy.js"></script>
 </head>
+<body class="bg-black">
+  <%= @inner_content %>
+</body>
+</html>

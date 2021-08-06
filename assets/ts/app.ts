@@ -2,6 +2,7 @@
 // The MiniCssExtractPlugin is used to separate it out into
 // its own CSS file.
 import "../css/app.css";
+import "../node_modules/aos/dist/aos.css"
 
 // webpack automatically bundles all modules in your
 // entry points. Those entry points can be configured
@@ -13,5 +14,13 @@ import "../css/app.css";
 //     import socket from "./socket"
 //
 import "phoenix_html";
+import "aos";
+import * as Aos from "aos";
 
-console.log("Hello, TypeScript!");
+window.onload = () => {
+    const aos_ret = Aos.init({
+        duration: 200,
+        easing: 'ease-in-sine',
+    });
+    console.log(aos_ret);
+}

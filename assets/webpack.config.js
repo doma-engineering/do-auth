@@ -45,6 +45,11 @@ module.exports = (env, options) => {
             'css-loader',
             'postcss-loader',
           ],
+        },
+        {
+          test: /\.woff2?$/,
+          include: path.join(process.cwd(), 'static/fonts'),
+          type: 'asset/resource'
         }
       ]
     },

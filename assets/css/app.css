@@ -3,3 +3,70 @@
 @tailwind components;
 
 @tailwind utilities;
+
+
+
+@layer base {
+
+    .superhero {
+        @apply text-xl sm:text-2xl md:text-3xl lg:text-5xl;
+    }
+
+    .person {
+        @apply w-16 h-16 md:w-32 md:h-32 fixed top-1/2
+    }
+
+    @font-face {
+        font-family: 'doma-archia';
+        src: url(/static/fonts/doma-100.woff2);
+        /* Thin */
+        font-weight: 100;
+    }
+
+    @font-face {
+        font-family: 'doma-archia';
+        src: url(/static/fonts/doma-300.woff2);
+        /* Light */
+        font-weight: 300;
+    }
+
+    @font-face {
+        font-family: 'doma-archia';
+        src: url(/static/fonts/doma-400.woff2);
+        /* DEFAULT / normal */
+        font-weight: 400;
+    }
+
+    @font-face {
+        font-family: 'doma-archia';
+        src: url(/static/fonts/doma-500.woff2);
+        /* Semibold */
+        font-weight: 500;
+    }
+
+    @font-face {
+        font-family: 'doma-archia';
+        src: url(/static/fonts/doma-600.woff2);
+        /* Bold */
+        font-weight: 600;
+    }
+
+    @font-face {
+        font-family: 'doma-archia';
+        src: url(/static/fonts/doma-400.woff2);
+        /* DEFAULT / normal */
+    }
+
+    @font-face {
+        font-family: 'doma-firacode';
+        src: url(/static/fonts/doma-mono-400.woff2);
+    }
+
+    * {
+        font-family: 'doma-archia';
+    }
+
+    code, pre {
+        font-family: 'doma-firacode';
+    }
+}
