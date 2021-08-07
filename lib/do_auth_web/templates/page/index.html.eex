@@ -1,4 +1,4 @@
-<div class="flex flex-col items-center justify-center h-screen">
+<div class="container flex flex-col items-center justify-center h-screen">
 
 <!-- Slide 1 (motto) -->
   <div class="flex items-center flex-grow superhero text-white">
@@ -41,30 +41,48 @@
 </div>
 
 <!-- Slide 3 (The Internet converges) -->
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-sand right-1/2" data-aos="fade-right">Alice@AOL</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-spice left-1/2" data-aos="fade-left">Bob@ICQ</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie" class="person bg-dune-spice -m-16 md:-m-32 left-1/2" data-aos="fade-right">Charlie@ICQ</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in" class="person bg-dune-sand fixed -mt-16 md:-mt-32 left-1/2 top-1/2" data-aos="fade-left">Charlie@AOL</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-dora" class="person bg-synthwave-teal -m-32 md:-m-64 left-1/2" data-aos="fade-right">Dora@Skype</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in-again" class="person bg-synthwave-teal -mt-16 md:-mt-32 left-1/2" data-aos="fade-left">Charlie@Skype</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-alice-gives-in" class="person bg-synthwave-teal right-1/2" data-aos="fade-right">Alice@Skype</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-synthwave-teal left-1/2" data-aos="fade-left">Bob@Skype</div>
-<div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-black -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+<div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-sand right-1/2" data-aos="fade-right"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-spice left-1/2" data-aos="fade-left"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie" class="person bg-dune-spice -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in" class="person bg-dune-sand fixed -mt-16 md:-mt-32 left-1/2 top-1/2" data-aos="fade-left"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-dora" class="person bg-synthwave-teal -m-32 md:-m-64 left-1/2" data-aos="fade-right"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in-again" class="person bg-synthwave-teal -mt-16 md:-mt-32 left-1/2" data-aos="fade-left"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-alice-gives-in" class="person bg-synthwave-teal right-1/2" data-aos="fade-right"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-synthwave-teal left-1/2" data-aos="fade-left"></div>
+  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-black -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+</div>
 
 <div class="flex flex-col items-center justify-center">
 
   <h1 class="superhero text-white">Deferred identity centralises the Web</h1>
 
-  <div class="flex items-center flex-grow text-white">
+  <div class="container p-4 flex items-center flex-grow text-white">
     <div class="space-y-0">
-      <div id="trigger-couple" class="w-0 h-96 bg-mute-light"></div>
-      <div id="trigger-charlie" class="w-0 h-96 bg-mute-dark"></div>
-      <div id="trigger-charlie-gives-in" class="w-0 h-96 bg-mute-light"></div>
-      <div id="trigger-dora" class="w-0 h-96 bg-mute-dark"></div>
-      <div id="trigger-charlie-gives-in-again" class="w-0 h-96 bg-mute-light"></div>
-      <div id="trigger-alice-is-alone" class="w-0 h-96 bg-mute-dark"></div>
-      <div id="trigger-alice-gives-in" class="w-0 h-96 bg-mute-light"></div>
-      <div id="trigger-bob-converts" class="w-0 h-96 bg-mute-dark"></div>
+      <div id="trigger-couple" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        Alice and Bob are identified by AOL and ICQ, they chat with their friends and family there.
+      </div>
+      <div id="trigger-charlie" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        Charlie knows them both and has to pick which service to register an account with. He likes ICQ more.
+      </div>
+      <div id="trigger-charlie-gives-in" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        But he wants to stay connected with Alice, so he gives in and registers an AOL acount. It's not big deal.
+      </div>
+      <div id="trigger-dora" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        Dora discovers a new cool technology, called "Skype". She uses it with her colleagues and logs on her AOL and ICQ accounts less and less.
+      </div>
+      <div id="trigger-charlie-gives-in-again" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        To keep up with her, Charlie signs up with Skype and his AOL account phases out over time.
+      </div>
+      <div id="trigger-alice-is-alone" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        Alice feels more and more lonely on AOL...
+      </div>
+      <div id="trigger-alice-gives-in" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        ...finally, she switches to Skype.
+      </div>
+      <div id="trigger-bob-converts" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        As Bob disappears from Charlie's contact list, everyone follows suite.
+      </div>
     </div>
   </div>
 </div>

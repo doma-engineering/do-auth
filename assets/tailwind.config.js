@@ -13,6 +13,7 @@ module.exports = {
         'sidenotes': '258px',
         'articles': '666px',
         'm_articles': '683px',
+        'h_explainer': '1000px',
       }
     },
     wider: {
