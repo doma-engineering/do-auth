@@ -55,4 +55,9 @@
 <body class="bg-black">
   <%= @inner_content %>
 </body>
+<script>
+    window.onload = () => {
+        DoAuth.main();
+    }
+</script>
 </html>

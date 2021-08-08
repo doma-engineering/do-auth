@@ -41,16 +41,19 @@
 </div>
 
 <!-- Slide 3 (The Internet converges) -->
-<div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-sand right-1/2" data-aos="fade-right"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-spice left-1/2" data-aos="fade-left"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie" class="person bg-dune-spice -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in" class="person bg-dune-sand fixed -mt-16 md:-mt-32 left-1/2 top-1/2" data-aos="fade-left"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-dora" class="person bg-synthwave-teal -m-32 md:-m-64 left-1/2" data-aos="fade-right"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in-again" class="person bg-synthwave-teal -mt-16 md:-mt-32 left-1/2" data-aos="fade-left"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-alice-gives-in" class="person bg-synthwave-teal right-1/2" data-aos="fade-right"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-synthwave-teal left-1/2" data-aos="fade-left"></div>
-  <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-black -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+<div id="convergence--container" x-data="{ open: !DoAuth.isPast(DoAuth.itoe('trigger-convergence-the-end')) }"
+  @scroll.window="open=!DoAuth.isPast(DoAuth.itoe('trigger-convergence-the-end'))">
+  <div x-show="open">
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-sand right-1/2" data-aos="fade-right"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-couple" class="person bg-dune-spice left-1/2" data-aos="fade-left"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie" class="person bg-dune-spice -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in" class="person bg-dune-sand fixed -mt-16 md:-mt-32 left-1/2 top-1/2" data-aos="fade-left"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-dora" class="person bg-synthwave-teal -m-32 md:-m-64 left-1/2" data-aos="fade-right"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-charlie-gives-in-again" class="person bg-synthwave-teal -mt-16 md:-mt-32 left-1/2" data-aos="fade-left"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-alice-gives-in" class="person bg-synthwave-teal right-1/2" data-aos="fade-right"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-synthwave-teal left-1/2" data-aos="fade-left"></div>
+    <div data-aos-anchor-placement="center-center" data-aos-anchor="#trigger-bob-converts" class="person bg-black -m-16 md:-m-32 left-1/2" data-aos="fade-right"></div>
+  </div>
 </div>
 
 <div class="flex flex-col items-center justify-center">
@@ -82,6 +85,9 @@
       </div>
       <div id="trigger-bob-converts" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
         As Bob disappears from Charlie's contact list, everyone follows suite.
+      </div>
+      <div id="trigger-convergence-the-end" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+      Boo
       </div>
     </div>
   </div>

@@ -17,7 +17,17 @@ import "phoenix_html";
 import "aos";
 import * as Aos from "aos";
 
-window.onload = () => {
+export function itoe(id: string): HTMLElement {
+    return document.getElementById(id);
+}
+
+export function isPast(x: HTMLElement): boolean {
+    const xbb = x.getBoundingClientRect();
+    console.log("XBB TOP", xbb.top);
+    return xbb.top < 0;
+}
+
+export function main() {
     const aos_ret = Aos.init({
         duration: 200,
         easing: 'ease-in-sine',

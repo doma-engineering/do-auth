@@ -15,12 +15,11 @@ module.exports = (env, options) => {
         new CssMinimizerPlugin({})
       ]
     },
-    entry: {
-      'app': glob.sync('./vendor/**/*.js').concat(['./ts/app.ts'])
-    },
+    entry: './ts/app.ts',
     output: {
-      filename: '[name].js',
+      filename: 'app.js',
       path: path.resolve(__dirname, '../priv/static/js'),
+      library: 'DoAuth',
       publicPath: '/js/'
     },
     devtool: devMode ? 'inline-source-map' : undefined,
