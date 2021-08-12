@@ -11,6 +11,7 @@ defmodule DoAuthWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    get "/tofu", DoAuthWeb.Trusts.TofuController, :index
   end
 
   scope "/", DoAuthWeb do

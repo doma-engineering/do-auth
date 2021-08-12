@@ -23,17 +23,17 @@ defmodule DoAuth.Schema.Credential do
 
   @spec one_by_subject_id(pos_integer()) :: %__MODULE__{}
   def one_by_subject_id(x) do
-    build_by_subject_id(x) |> Repo.one()
+    build_by_subject_id(x) |> Repo.one() |> preload()
   end
 
   @spec one_by_subject_id!(pos_integer()) :: %__MODULE__{}
   def one_by_subject_id!(x) do
-    build_by_subject_id(x) |> Repo.one!()
+    build_by_subject_id(x) |> Repo.one!() |> preload()
   end
 
   @spec all_by_subject_id(pos_integer()) :: list(%__MODULE__{})
   def all_by_subject_id(x) do
-    build_by_subject_id(x) |> Repo.all()
+    build_by_subject_id(x) |> Repo.all() |> preload()
   end
 
   @doc """

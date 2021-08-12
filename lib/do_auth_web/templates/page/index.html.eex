@@ -84,13 +84,47 @@
         ...finally, she switches to Skype.
       </div>
       <div id="trigger-bob-converts" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
-        As Bob disappears from Charlie's contact list, everyone follows suite.
+        Charlie is offline for days, so Bob follows suite...
       </div>
-      <div id="trigger-convergence-the-end" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
-      Boo
+      <div id="trigger-convergence-the-end" class="explainer font-normal" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        ...A decade later, with mass exodous from centralised platforms like Facebook over concerns about security and overall ethics, many experience fragmentation from their social network. Many stay and feel like they're hostages of the megacorporations. The first step to fix this mess is putting identity into the hands of each individual. With as low entry as possible.
       </div>
     </div>
   </div>
+</div>
+
+
+<!-- Slide 4 (Introduction) -->
+<div id="intro--container" x-data="{ open1: !DoAuth.isPast(DoAuth.itoe('trigger-intro-the-end')) }"
+  @scroll.window="open1=!DoAuth.isPast(DoAuth.itoe('trigger-intro-the-end'))">
+  <div x-show="open1">
+    <div
+      class="person bg-dune-sand right-1/2"
+      data-aos="fade-right"
+      data-aos-anchor-placement="center-center"
+      data-aos-anchor="#trigger-federated"
+    ></div>
+  </div>
+</div>
+
+
+<div class="flex flex-col items-center justify-center">
+
+  <h1 class="superhero text-white">With DoAuth, you represent yourself</h1>
+
+  <div class="container p-4 flex items-center flex-grow text-white">
+    <div class="space-y-0">
+      <div class="explainer" >
+        <div id="trigger-federated" data-aos-anchor-placement="top-center" data-aos="fade-in" class="explainer--step font-bold">You make and manage your identity locally</div>
+        <div id="trigger-federated" data-aos-anchor-placement="top-center" data-aos="fade-in" class="explainer--step">Generate identity object</div>
+        <div id="trigger-federated" data-aos-anchor-placement="top-center" data-aos="fade-in" class="explainer--step">Send its public component to one of many DoAuth servers</div>
+      </div>
+      <div id="trigger-intro-the-end" class="explainer" data-aos-anchor-placement="top-center" data-aos="fade-in">
+        Boo
+      </div>
+    </div>
+  </div>
+
 </div>
 
 

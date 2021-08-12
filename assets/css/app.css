@@ -19,6 +19,11 @@
         text-shadow: 2px 2px 4px #161616;
     }
 
+    .explainer--step {
+        @apply h-44;
+        @apply font-normal;
+    }
+
     .person {
         @apply w-16 h-16 md:w-32 md:h-32 fixed top-1/2
     }
