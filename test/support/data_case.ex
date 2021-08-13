@@ -28,7 +28,11 @@ defmodule DoAuth.DataCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(DoAuth.Repo)
+    :ok =
+      case Ecto.Adapters.SQL.Sandbox.checkout(DoAuth.Repo) do
+        :ok -> :ok
+        {:already, :owner} -> :ok
+      end
 
     unless tags[:async] do
       Ecto.Adapters.SQL.Sandbox.mode(DoAuth.Repo, {:shared, self()})

@@ -5,20 +5,26 @@ defmodule NickServTest do
   alias DoAuth.{NickServ}
   alias DoAuth.Repo.Populate
 
-  test "nicks can be registered" do
-    Populate.populate_do()
-    registrant_kp = %{public: rpk} = signing_key_id_1_fixture()
-    {:ok, did} = DID.sin_one_pk(rpk)
-    did64 = DID.to_string(did)
+  describe "in NickServ" do
+    setup do
+      {:ok, _} = Populate.populate_do()
+      :ok
+    end
 
-    {:ok, req_vc} =
-      Credential.transact_with_keypair_from_subject_map(registrant_kp, %{"nickname" => "jonn"})
+    test "nicks can be registered" do
+      registrant_kp = %{public: rpk} = signing_key_id_1_fixture()
+      {:ok, did} = DID.sin_one_pk(rpk)
+      did64 = DID.to_string(did)
 
-    req_vc_map = Credential.to_map(req_vc)
+      {:ok, req_vc} =
+        Credential.transact_with_keypair_from_subject_map(registrant_kp, %{"nickname" => "jonn"})
 
-    {:ok, _x} = NickServ.register64(req_vc_map)
+      req_vc_map = Credential.to_map(req_vc)
 
-    assert(NickServ.whois_nickname("jonn") == {:ok, did64})
-    assert(NickServ.whois_did64(did64) == {:ok, "jonn"})
+      {:ok, _x} = NickServ.register64(req_vc_map)
+
+      assert(NickServ.whois_nickname("jonn") == {:ok, did64})
+      assert(NickServ.whois_did64(did64) == {:ok, "jonn"})
+    end
   end
 end
