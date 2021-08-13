@@ -92,6 +92,20 @@ defmodule DoAuthCryptoTest do
   end
 
   test "can create and verify embedded proofs" do
+    # Deprecated by verifiable presentation support
+  end
+
+  test "credentials are verifiable" do
+    kp = Crypto.server_keypair()
+    {:ok, _} = DID.sin_one_pk(kp.public)
+
+    cred_map =
+      Credential.transact_with_keypair_from_subject_map!(kp, %{"foo" => "bar"}, %{
+        "location" => "/city/London"
+      })
+      |> Credential.to_map()
+
+    Crypto.verify_map(cred_map)
   end
 
   test "fmap show over enumerables" do

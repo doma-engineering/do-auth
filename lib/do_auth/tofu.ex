@@ -34,7 +34,7 @@ defmodule DoAuth.Tofu do
         {:ok,
          x
          |> Credential.to_map()
-         |> Map.put(:id, "#{DoAuthWeb.Endpoint.url()}/tofu")}
+         |> Map.put("id", "#{DoAuthWeb.Endpoint.url()}/tofu")}
     end
   end
 end
