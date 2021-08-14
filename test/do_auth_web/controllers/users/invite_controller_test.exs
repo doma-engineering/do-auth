@@ -26,8 +26,27 @@ defmodule DoAuthWeb.Users.InviteControllerTest do
       new_kp = signing_key_fixture(Enum.random(8..32))
       new_pk64 = new_kp.public |> Crypto.show()
 
-      _fulfillment =
+      fulfillment_resp =
         post(c, "/users/invite", %{"public" => new_pk64, "invite" => invite_presentation})
+
+      # We probably should write a funciton that takes the resp from assigns properly for testing purposes
+      fulfillment_cred_map =
+        fulfillment_resp
+        |> Map.get(:assigns)
+        |> Map.get(:fulfillment)
+
+      assert "fulfill" ==
+               fulfillment_cred_map
+               |> Map.get("credentialSubject")
+               |> Map.get("kind")
+
+      assert DID.one_by_pk!(skp.public) |> DID.to_string() ==
+               fulfillment_cred_map |> Map.get("issuer")
+
+      assert DID.one_by_pk64!(new_pk64) |> DID.to_string() ==
+               fulfillment_cred_map |> Map.get("credentialSubject") |> Map.get("holder")
+
+      assert Crypto.verify_map(fulfillment_cred_map)
     end
   end
 end

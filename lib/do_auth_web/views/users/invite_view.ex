@@ -2,8 +2,8 @@ defmodule DoAuthWeb.Users.InviteView do
   use DoAuthWeb, :view
 
   @spec render(String.t(), map()) :: map()
-  def render("index.json", %{ok: :ko}) do
-    "also not implemented"
+  def render("index.json", %{fulfillment: fulfillment}) do
+    fulfillment
   end
 
   def render("403.json", e) do
