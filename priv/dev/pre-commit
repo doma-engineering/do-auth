@@ -5,4 +5,5 @@ set -xeuo pipefail
 # We use -e so that we don't have to chain commands with &&
 
 mix test
+mix dialyzer
 mix credo
