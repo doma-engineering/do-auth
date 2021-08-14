@@ -1,4 +1,7 @@
 defmodule NickServTest do
+  @moduledoc """
+  Testing nickserver!
+  """
   use DoAuth.DataCase
   use DoAuth.Boilerplate.DatabaseStuff
   use DoAuth.Test.Support.Fixtures, [:crypto]

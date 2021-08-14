@@ -40,4 +40,10 @@ defmodule DoAuthWeb.Router do
       live_dashboard "/dashboard", metrics: DoAuthWeb.Telemetry
     end
   end
+
+  scope "/users", DoAuthWeb.Users, as: :users do
+    pipe_through :api
+    post "/invite", InviteController, :index
+    post "/nickserv", NickServController, :index
+  end
 end

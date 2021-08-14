@@ -1,4 +1,7 @@
 defmodule InviteTest do
+  @moduledoc """
+  Test business logic of invites.
+  """
   use DoAuth.DataCase
   use DoAuth.Boilerplate.DatabaseStuff
   use DoAuth.Test.Support.Fixtures, [:crypto]
@@ -17,6 +20,7 @@ defmodule InviteTest do
 
       granted =
         Invite.grant!(did, 1, %{"effectiveDate" => Repo.now()},
+          # This is a work around the fact that tests fire faster than PgSQL rounding.
           timestamp: Repo.now() |> DateTime.add(Enum.random(1..1_000_000))
         )
 

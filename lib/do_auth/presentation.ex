@@ -48,6 +48,7 @@ defmodule DoAuth.Presentation do
         }
         |> p.("id", o.(:location))
         |> p.("holder", o.(:holder))
+        |> p.("nonce", o.(:nonce))
 
       {:ok, Crypto.sign_map!(kp, presentation_claim, opts)}
     rescue

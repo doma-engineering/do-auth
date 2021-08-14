@@ -82,6 +82,16 @@ defmodule DoAuth.Schema.Proof do
     res
   end
 
+  @spec one_by_signature64(String.t()) :: nil | %__MODULE__{}
+  def one_by_signature64(sig64) do
+    build_by_signature64(sig64) |> Repo.one() |> preload()
+  end
+
+  @spec build_by_signature64(String.t()) :: Ecto.Query.t()
+  def build_by_signature64(sig64) do
+    from(p in __MODULE__, where: p.signature == ^sig64)
+  end
+
   @spec from_signature64(%Issuer{}, String.t()) :: {:ok, %__MODULE__{}} | {:error, any()}
   def from_signature64(issuer, sig64) do
     build_from_signature64(issuer, sig64) |> Repo.insert() |> preload()

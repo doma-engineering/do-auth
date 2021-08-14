@@ -51,7 +51,7 @@ defmodule DoAuth.Invite do
   @spec fulfill(String.t(), map()) :: any()
   def fulfill(pk64, %{} = invite_presentation_map) do
     try do
-      %{} = invite_map = invite_presentation_map["verifiableCredential"]
+      %{} = invite_map = Map.get(invite_presentation_map, "verifiableCredential", %{})
       {:ok, true} = Crypto.verify_map(invite_presentation_map)
       true = is_presentation_vacant(invite_presentation_map)
 
