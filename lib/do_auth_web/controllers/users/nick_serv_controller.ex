@@ -16,10 +16,12 @@ defmodule DoAuthWeb.Users.NickServController do
 
     try do
       case NickServ.register64(req_map) do
-        {:ok, cred} -> conn |> render("index.json", %{fulfillment: cred |> Credential.to_map()})
-      end
+        {:ok, cred} ->
+          conn |> render("index.json", %{fulfillment: cred |> Credential.to_map()})
 
-      conn |> render("index.json", ok: :ko)
+        e = {:error, _} ->
+          conn |> put_status(403) |> render("403.json", %{"error" => e})
+      end
     rescue
       _e ->
         conn

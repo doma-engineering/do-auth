@@ -21,14 +21,20 @@ defmodule DoAuth.NickServ do
     end
 
     # Validate once before locking to exit early
-    register64_validate(register_cred_map)
-    |> cont(fn ->
-      Repo.transaction(fn ->
-        SQL.query!(Repo, "LOCK credentials IN EXCLUSIVE MODE;")
-        # Validate again with the exclusive lock
-        register64_validate(register_cred_map) |> cont(finally)
+    ok_res =
+      register64_validate(register_cred_map)
+      |> cont(fn ->
+        Repo.transaction(fn ->
+          SQL.query!(Repo, "LOCK credentials IN EXCLUSIVE MODE;")
+          # Validate again with the exclusive lock
+          register64_validate(register_cred_map) |> cont(finally)
+        end)
       end)
-    end)
+
+    case ok_res do
+      {:ok, res} -> res
+      e -> e
+    end
   end
 
   defp register64_do(nickname, holder, discoverable) do

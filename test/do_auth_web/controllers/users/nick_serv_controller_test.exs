@@ -7,7 +7,7 @@ defmodule DoAuthWeb.Users.NickServControllerTest do
   use DoAuth.DataCase
   use DoAuth.Boilerplate.DatabaseStuff
   use DoAuth.Test.Support.Fixtures, [:crypto]
-  alias DoAuth.Repo.Populate
+  alias DoAuth.{Crypto, Repo.Populate}
 
   describe "NickServ endpoint" do
     setup do
@@ -26,7 +26,17 @@ defmodule DoAuthWeb.Users.NickServControllerTest do
         })
         |> Credential.to_map()
 
-      post(c, "/users/nickserv", %{"register" => req_map})
+      res =
+        post(c, "/users/nickserv", %{"register" => req_map})
+        |> Map.get(:assigns)
+        |> Map.get(:fulfillment)
+
+      assert "nickserv" == res |> Map.get("credentialSubject") |> Map.get("kind")
+
+      assert DID.one_by_pk(rpk) |> DID.to_string() ==
+               res |> Map.get("credentialSubject") |> Map.get("holder")
+
+      assert Crypto.verify_map(res)
     end
   end
 end
