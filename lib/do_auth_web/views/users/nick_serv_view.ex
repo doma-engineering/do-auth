@@ -6,8 +6,31 @@ defmodule DoAuthWeb.Users.NickServView do
     fulfillment
   end
 
-  def render("403.json", e) do
-    e = e |> Map.delete(:conn)
-    %{"error" => "invalid credential", "info" => e}
+  def render("whois.json", %{"did" => did_str}) do
+    did_str
+  end
+
+  def render("whois.json", %{"nickname" => nickname}) do
+    nickname
+  end
+
+  def render("403.json", %{"error" => e}) do
+    info =
+      case e do
+        {:error, e} -> e
+        x -> x
+      end
+
+    %{"error" => "data not found", "info" => info}
+  end
+
+  def render("404.json", %{"error" => e}) do
+    info =
+      case e do
+        {:error, e} -> e
+        x -> x
+      end
+
+    %{"error" => "data not found", "info" => info}
   end
 end

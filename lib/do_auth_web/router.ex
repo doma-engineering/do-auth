@@ -44,6 +44,7 @@ defmodule DoAuthWeb.Router do
   scope "/users", DoAuthWeb.Users, as: :users do
     pipe_through :api
     post "/invite", InviteController, :index
-    post "/nickserv", NickServController, :index
+    post "/nickserv/register", NickServController, :index
+    post "/nickserv/whois", NickServController, :whois
   end
 end
