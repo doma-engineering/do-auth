@@ -173,6 +173,7 @@ defmodule DoAuth.Schema.Credential do
     g = &Map.get(cred, &1)
     m = &Map.get(misc, &1)
     pm = &Cat.put_new_value(&1, &2, Map.get(misc, &2))
+    pm! = &Cat.put_value(&1, &2, Map.get(misc, &2))
 
     %{
       "@context" => ctxs,
@@ -182,6 +183,7 @@ defmodule DoAuth.Schema.Credential do
       "credentialSubject" => Subject.to_map(subject)
     }
     |> p.("id", m.("location"))
+    |> pm!.("issuanceDate")
     |> pm.("effectiveDate")
     |> pm.("validFrom")
     |> pm.("validUntil")
