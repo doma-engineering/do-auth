@@ -14,6 +14,10 @@ defmodule DoAuthWeb.Router do
     get "/tofu", DoAuthWeb.Trusts.TofuController, :index
   end
 
+  pipeline :rate_limited do
+    plug :accepts, ["json"]
+  end
+
   scope "/", DoAuthWeb do
     pipe_through :browser
 
@@ -46,5 +50,10 @@ defmodule DoAuthWeb.Router do
     post "/invite", InviteController, :index
     post "/nickserv/register", NickServController, :index
     post "/nickserv/whois", NickServController, :whois
+  end
+
+  scope "/foreign", DoAuthWeb.Foreign, as: :foreign do
+    pipe_through :rate_limited
+    get "/invite", InviteController, :index
   end
 end
