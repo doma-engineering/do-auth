@@ -8,6 +8,7 @@ defmodule DoAuth.Invite do
 
   use DoAuth.Boilerplate.DatabaseStuff
   alias DoAuth.{Crypto, Presentation}
+  import DoAuth.Cat, only: [const: 1]
 
   @spec grant(%DID{}, pos_integer(), list()) :: {:ok, %Credential{}} | {:error, any()}
   def grant(did, n, opts \\ []) do
@@ -52,33 +53,36 @@ defmodule DoAuth.Invite do
   def fulfill(pk64, %{} = invite_presentation_map) do
     try do
       %{} = invite_map = Map.get(invite_presentation_map, "verifiableCredential", %{})
-      {:ok, true} = Crypto.verify_map(invite_presentation_map)
+      true = is_public_key_unregistered(pk64)
+
+      {:ok, true} =
+        case Crypto.verify_map(invite_presentation_map) do
+          {:error, _something} ->
+            Crypto.verify_map(invite_presentation_map, key_extractor: const(pk64))
+
+          ok = {:ok, true} ->
+            ok
+        end
+
       true = is_presentation_vacant(invite_presentation_map)
 
-      case Presentation.verify_presentation_map(invite_presentation_map) do
-        {:ok, true} ->
-          :ok = fulfill_do!(invite_presentation_map)
+      :ok = fulfill_do!(invite_presentation_map)
 
-          Repo.transaction(fn ->
-            Credential.transact_with_keypair_from_subject_map!(Crypto.server_keypair(), %{
-              "parent" => invite_map["id"],
-              "signature" => invite_presentation_map["proof"]["signatre"],
-              "kind" => "decrement"
-            })
+      Repo.transaction(fn ->
+        Credential.transact_with_keypair_from_subject_map!(Crypto.server_keypair(), %{
+          "parent" => invite_map["id"],
+          "signature" => invite_presentation_map["proof"]["signatre"],
+          "kind" => "decrement"
+        })
 
-            did = DID.sin_one_pk64!(pk64)
+        did = DID.sin_one_pk64!(pk64)
 
-            Credential.transact_with_keypair_from_subject_map!(Crypto.server_keypair(), %{
-              "parent" => invite_map["id"],
-              "holder" => did |> DID.to_string(),
-              "kind" => "fulfill"
-            })
-          end)
-
-        {:error, e} ->
-          {:error,
-           %{"can't fulfill invalid presentation map" => invite_presentation_map, "error" => e}}
-      end
+        Credential.transact_with_keypair_from_subject_map!(Crypto.server_keypair(), %{
+          "parent" => invite_map["id"],
+          "holder" => did |> DID.to_string(),
+          "kind" => "fulfill"
+        })
+      end)
     rescue
       e -> {:error, %{"exception" => e, "stack trace" => __STACKTRACE__}}
     end
@@ -86,6 +90,13 @@ defmodule DoAuth.Invite do
 
   defp fulfill_do!(%{} = invite_presentation_map) do
     credential_map = Map.get(invite_presentation_map, "verifiableCredential")
+
+    {invite_presentation_map, credential_map} =
+      case Map.get(credential_map, "verifiableCredential") do
+        nil -> {invite_presentation_map, credential_map}
+        actual_cred -> {credential_map, actual_cred}
+      end
+
     true = is_vacant(credential_map)
     true = is_issued_by_us(credential_map) || is_presenter_the_holder(invite_presentation_map)
     true = is_contemporary(credential_map)
@@ -135,6 +146,7 @@ defmodule DoAuth.Invite do
   end
 
   defp is_contemporary(credential_map) do
+    require Logger
     tau0 = Repo.now()
     g = &Map.get(credential_map, &1, &2)
 
@@ -147,7 +159,7 @@ defmodule DoAuth.Invite do
         throw(ArgumentError.message(%{message: "issuanceDate is missing"}))
       else
         {:ok, valid_from, 0} = valid_from |> DateTime.from_iso8601()
-        tau0 >= valid_from
+        Enum.member?([:gt, :eq], DateTime.compare(tau0, valid_from))
       end
 
     true =
@@ -155,9 +167,13 @@ defmodule DoAuth.Invite do
         true
       else
         {:ok, valid_until, 0} = valid_until |> DateTime.from_iso8601()
-        tau0 <= valid_until
+        Enum.member?([:lt, :eq], DateTime.compare(tau0, valid_until))
       end
 
     true
+  end
+
+  defp is_public_key_unregistered(pk64) do
+    [] == DID.all_by_pk64(pk64)
   end
 end

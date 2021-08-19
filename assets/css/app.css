@@ -24,6 +24,10 @@
         @apply font-normal;
     }
 
+    .explainer--listing {
+        white-space: pre-wrap;
+    }
+
     .person {
         @apply w-16 h-16 md:w-32 md:h-32 fixed top-1/2
     }

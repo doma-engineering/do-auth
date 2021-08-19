@@ -23,13 +23,12 @@ export function itoe(id: string): HTMLElement {
 
 export function isPast(x: HTMLElement): boolean {
     const xbb = x.getBoundingClientRect();
-    console.log("XBB TOP", xbb.top);
     return xbb.top < 0;
 }
 
 export function main() {
     const aos_ret = Aos.init({
-        duration: 200,
+        duration: 250,
         easing: 'ease-in-sine',
     });
     console.log(aos_ret);

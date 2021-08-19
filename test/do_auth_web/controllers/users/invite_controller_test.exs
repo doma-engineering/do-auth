@@ -20,14 +20,32 @@ defmodule DoAuthWeb.Users.InviteControllerTest do
       root_invite = Populate.ensure_root_invite!({}) |> Credential.to_map()
       skp = Crypto.server_keypair()
 
-      {:ok, invite_presentation} =
-        Presentation.present_credential_map(skp, root_invite, nonce: Enum.random(0..1_000_000))
-
       new_kp = signing_key_fixture(Enum.random(8..32))
       new_pk64 = new_kp.public |> Crypto.show()
 
+      did = DID.sin_one_pk64!(new_pk64)
+
+      {:ok, invite_presentation} =
+        Presentation.present_credential_map(new_kp, root_invite, nonce: Enum.random(0..1_000_000))
+
+      # BEGIN CLEANUP WORKAROUND
+
+      [issuer] = Issuer.all_by_did_id(did.id)
+      iid = Map.get(issuer, :id)
+      proofs_q = from(p in Proof, where: p.verification_method_id == ^iid, select: [:id])
+
+      credentials_q =
+        from(c in Credential, where: c.issuer_id == ^iid or c.proof_id in subquery(proofs_q))
+
+      # END CLEANUP WORKAROUND
+
+      Repo.delete_all(credentials_q)
+      Repo.delete_all(proofs_q)
+      Repo.delete!(issuer)
+      Repo.delete!(did)
+
       fulfillment_resp =
-        post(c, "/users/invite", %{"public" => new_pk64, "invite" => invite_presentation})
+        post(c, "/users/invite", %{"public" => new_pk64, "presentation" => invite_presentation})
 
       # We probably should write a funciton that takes the resp from assigns properly for testing purposes
       fulfillment_cred_map =

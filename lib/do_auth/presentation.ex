@@ -39,12 +39,18 @@ defmodule DoAuth.Presentation do
     try do
       p = &Cat.put_new_value(&1, &2, &3)
       o = &Keyword.get(opts, &1)
-      issuer = DID.one_by_pk!(pk)
+
+      issuer_str =
+        try do
+          DID.one_by_pk!(pk) |> DID.to_string()
+        rescue
+          _ -> "did:doma:#{Crypto.bland_hash(pk |> Crypto.show())}"
+        end
 
       presentation_claim =
         %{
           "verifiableCredential" => credential_map,
-          "issuer" => issuer |> DID.to_string()
+          "issuer" => issuer_str
         }
         |> p.("id", o.(:location))
         |> p.("holder", o.(:holder))

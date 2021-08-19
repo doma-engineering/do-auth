@@ -91,4 +91,10 @@ defmodule DoAuth.Cat do
   @spec cont({:ok | :error, any()}, (() -> any())) :: {:ok | :error, any()}
   def cont({:error, _} = e, _), do: e
   def cont({:ok, _}, f), do: f.()
+
+  @doc """
+  Constant function
+  """
+  @spec const(any()) :: (any() -> any())
+  def const(x), do: fn _ -> x end
 end
