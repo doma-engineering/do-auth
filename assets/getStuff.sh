@@ -1,1 +1,0 @@
-npm install "@babel/core@latest" "@babel/preset-env@latest" "autoprefixer@latest" "babel-loader@latest" "copy-webpack-plugin@latest" "css-loader@latest" "mini-css-extract-plugin@latest" "css-minimizer-webpack-plugin@latest" "postcss@latest" "postcss-loader@latest" "tailwindcss@latest" "webpack@latest" "webpack-cli@latest" --save-dev

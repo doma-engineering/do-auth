@@ -35,7 +35,3 @@ npm-debug.log
 
 # Don't leak the secrets!
 /config/*.secret.exs
-
-# Local postgresql
-/pgdata/
-/logfile
