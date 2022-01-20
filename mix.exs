@@ -4,7 +4,7 @@ defmodule DoAuth.MixProject do
   def project do
     [
       app: :do_auth,
-      version: "0.1.0",
+      version: "0.5.0-pre",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps()
