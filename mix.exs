@@ -9,6 +9,7 @@ defmodule DoAuth.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
+      package: package(),
     ]
   end
 
@@ -40,6 +41,18 @@ defmodule DoAuth.MixProject do
       {:doma_algae, "~> 1.3.1-doma"},
       {:doma_quark, "~> 2.3.2-doma2"},
       {:plug_cowboy, "~> 2.0"},
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["WTFPL"],
+      links: %{
+          "GitHub" => "https://github.com/doma-engineering/do-auth",
+          "Support" => "https://social.doma.dev/@jonn",
+          "Matrix" => "https://matrix.to/#/#uptight:matrix.org"
+        },
+        maintainers: ["doma.dev"]
     ]
   end
 end
