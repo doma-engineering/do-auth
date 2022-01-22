@@ -35,3 +35,9 @@ npm-debug.log
 
 # Don't leak the secrets!
 /config/*.secret.exs
+
+# Direnv!
+.direnv/
+
+# Ignore persist DB
+db/

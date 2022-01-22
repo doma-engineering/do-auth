@@ -7,14 +7,22 @@ defmodule DoAuth.MixProject do
       version: "0.5.0-pre",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases(),
+    ]
+  end
+
+  defp aliases do
+    [
+      test: "test --no-start",
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {DoAuth.Otp.Application, []}
     ]
   end
 
@@ -23,6 +31,15 @@ defmodule DoAuth.MixProject do
     [
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:jason, "~> 1.3"},
+      {:enacl, "~> 1.2.1"},
+      {:dyn_hacks, "~> 0.1.0"},
+      {:uptight, "~> 0.1.0-pre1"},
+      {:persist, "~> 0.1.0-pre"},
+      {:doma_witchcraft, "~> 1.0.4-doma"},
+      {:doma_algae, "~> 1.3.1-doma"},
+      {:doma_quark, "~> 2.3.2-doma2"},
+      {:plug_cowboy, "~> 2.0"},
     ]
   end
 end

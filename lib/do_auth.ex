@@ -1,19 +1,5 @@
 defmodule DoAuth do
   @moduledoc """
-  Documentation for `DoAuth`.
+  DoAuth is an implementation of VC / DID for Doma cluster.
   """
-
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> DoAuth.hello()
-      :world
-
-  """
-  @spec hello() :: :world
-  def hello do
-    :world
-  end
 end
