@@ -546,7 +546,10 @@ defmodule DoAuth.Crypto do
              } do
         kp =
           cenv.()
-          |> Keyword.get(:secret_key_base)
+          |> Keyword.get(
+            :secret_key_base,
+            Keyword.fetch(cenv.(), :text__secret_key_base) |> t_new_maybe()
+          )
           |> main_key_reproduce(slip)
           |> derive_signing_keypair(1)
 
@@ -558,6 +561,10 @@ defmodule DoAuth.Crypto do
       kp_maybe
     end
   end
+
+  @spec t_new_maybe(:error | binary) :: :error | T.t()
+  defp t_new_maybe(:error), do: :error
+  defp t_new_maybe({:ok, <<x::binary>>}), do: T.new!(x)
 
   @doc """
   DON'T USE THIS FUNCTION, IT'S EXPORTED JUST FOR BETTER TYPECHEKING!
