@@ -5,18 +5,19 @@ defmodule DoAuth.MixProject do
     [
       app: :do_auth,
       version: "0.5.1-pre",
-      description: "Fast, lean and reliable authentication server based on verifiable credentials standard",
+      description:
+        "Fast, lean and reliable authentication server based on verifiable credentials standard",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      package: package(),
+      package: package()
     ]
   end
 
   defp aliases do
     [
-      test: "test --no-start",
+      test: "test --no-start"
     ]
   end
 
@@ -42,7 +43,7 @@ defmodule DoAuth.MixProject do
       {:doma_witchcraft, "~> 1.0.4-doma"},
       {:doma_algae, "~> 1.3.1-doma"},
       {:doma_quark, "~> 2.3.2-doma2"},
-      {:plug_cowboy, "~> 2.0"},
+      {:plug_cowboy, "~> 2.0"}
     ]
   end
 
@@ -50,11 +51,11 @@ defmodule DoAuth.MixProject do
     [
       licenses: ["WTFPL"],
       links: %{
-          "GitHub" => "https://github.com/doma-engineering/do-auth",
-          "Support" => "https://social.doma.dev/@jonn",
-          "Matrix" => "https://matrix.to/#/#uptight:matrix.org"
-        },
-        maintainers: ["doma.dev"]
+        "GitHub" => "https://github.com/doma-engineering/do-auth",
+        "Support" => "https://social.doma.dev/@jonn",
+        "Matrix" => "https://matrix.to/#/#uptight:matrix.org"
+      },
+      maintainers: ["doma.dev"]
     ]
   end
 end

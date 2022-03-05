@@ -55,12 +55,12 @@ defmodule DoAuth.Invite do
 
   @spec unpaid_users_allowed_until :: DateTime.t()
   def unpaid_users_allowed_until() do
-    ~N[2022-02-22 20:22:02] |> DateTime.from_naive!("Etc/UTC")
+    ~N[2023-02-23 20:22:02] |> DateTime.from_naive!("Etc/UTC")
   end
 
   @spec remind_to_pay_from :: DateTime.t()
   def remind_to_pay_from() do
-    ~N[2022-01-22 20:22:01] |> DateTime.from_naive!("Etc/UTC")
+    ~N[2023-01-23 20:22:01] |> DateTime.from_naive!("Etc/UTC")
   end
 
   @spec mk_invites(B.Urlsafe.t(), pos_integer()) :: map()
