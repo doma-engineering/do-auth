@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import ensureDynLoaded from './doauthor_react';
 
 function SimpleRegister() {
-    const [dyn, setDyn] = useState('');
+    const [dyn,] = useState('');
 
     useEffect(() => {
         if (!dyn) {
-            ensureDynLoaded(dyn, setDyn);
         }
     }, []);
 
