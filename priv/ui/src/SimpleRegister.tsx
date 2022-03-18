@@ -6,7 +6,7 @@ function SimpleRegister() {
     useEffect(() => {
         if (!dyn) {
         }
-    }, []);
+    }, [dyn]);
 
     if (dyn) {
         return <span>{dyn}</span>;
