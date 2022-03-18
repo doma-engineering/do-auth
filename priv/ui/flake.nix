@@ -14,12 +14,14 @@
           buildInputs = [
 
             pkgs.nodejs-17_x
+            pkgs.libsodium
 
             npkgs.typescript
             npkgs.node-gyp
             npkgs.serve
 
           ];
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.libsodium ];
         };
     };
 }
