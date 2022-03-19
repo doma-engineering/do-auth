@@ -8,6 +8,8 @@ import {
     isEncoded,
     Ureus,
     toRaw,
+    toUnit8Array,
+    toT,
 } from './base';
 
 export type Canned = number | bigint | string | Canned[][] | Canned[];
@@ -139,38 +141,26 @@ export async function mainKeyInit(pass: string, scfg: SlipConfig) {
     return [mkey, slip];
 }
 
-export async function deriveSigningKeypair<
-    T extends string | Raw | Encoded | Url
->(mkey: Ureus, n: number, t: undefined | T): Promise<SigningKeypair<T>> {
+// With "Ureus" we're trying something new, which is basically duck-typing.
+// I'm not too happy about accepting unwrapped, unvalidated strings / unit8arrays here, so perhaps the approach we take in Elixir is better.
+// This approach guarantees no mess though and prevents from making a function per data acceptable underlying data type.
+export async function deriveSigningKeypair<T extends Ureus>(
+    mkey: Ureus,
+    n: number,
+    t: undefined | T
+): Promise<SigningKeypair<T>> {
     const { sodium, cfg } = await getSodiumAndCfg(sodium0);
     const mkd = sodium.crypto_kdf_derive_from_key(
         cfg.keySize,
         n,
         'signsign',
-        (await toRaw(mkey)).raw
+        await toUnit8Array(mkey)
     );
     const { publicKey, privateKey } = sodium.crypto_sign_seed_keypair(mkd);
-    if (typeof t === 'undefined' || isUrl(t)) {
-        return {
-            public: (await toUrl(publicKey)) as T,
-            secret: (await toUrl(privateKey)) as T,
-        };
-    }
-    if (typeof t === 'string') {
-        return {
-            public: (await toUrl(publicKey)).encoded as T,
-            secret: (await toUrl(privateKey)).encoded as T,
-        };
-    }
-    const pku = await toUrl(publicKey);
-    const sku = await toUrl(privateKey);
-    if (isEncoded(t)) {
-        return {
-            public: { encoded: pku.encoded } as T,
-            secret: { encoded: sku.encoded } as T,
-        };
-    }
-    return { public: { raw: pku.raw } as T, secret: { raw: sku.raw } as T };
+    return {
+        public: (await toT(publicKey, t)) as T,
+        secret: (await toT(privateKey, t)) as T,
+    };
 }
 
 /*
