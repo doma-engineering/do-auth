@@ -1,4 +1,4 @@
-import { Url } from './base';
+import { toT, Ureus } from './base';
 import { isoUtcNow } from './util';
 
 export type Proof<T> = {
@@ -7,12 +7,14 @@ export type Proof<T> = {
     timestamp: string;
 };
 
-export function fromSignature(issuer: string, signature: Url): Proof<Url> {
+export async function fromSignature<T extends Ureus>(
+    issuer: string,
+    signature: Ureus,
+    t?: T
+): Promise<Proof<T>> {
     return {
         verificationMethod: issuer,
-        signature: signature,
+        signature: await toT(signature, t),
         timestamp: isoUtcNow(),
     };
 }
-
-//export function fromSignature64(issuer: string, signature: string);

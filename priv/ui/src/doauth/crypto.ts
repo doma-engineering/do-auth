@@ -3,14 +3,13 @@ import {
     toUrl,
     Encoded,
     Url,
-    Raw,
-    isUrl,
-    isEncoded,
     Ureus,
     toRaw,
     toUnit8Array,
     toT,
+    toString1,
 } from './base';
+import { fromSignature, Proof } from './proof';
 
 export type Canned = number | bigint | string | Canned[][] | Canned[];
 export type Canonicalised = Canned;
@@ -166,7 +165,7 @@ export async function deriveSigningKeypair<T extends Ureus>(
 export async function sign<T extends Ureus>(
     msg: string,
     kp: SigningKeypair<Ureus>,
-    t: undefined | T
+    t?: T
 ): Promise<DetachedSignature<T>> {
     const sodium = await getSodium(sodium0);
     const signature = sodium.crypto_sign_detached(
@@ -191,35 +190,41 @@ export async function verify(
     );
 }
 
-/*
-
 export async function blandHash(msg: string): Promise<Url> {
-  const { sodium, cfg } = await getSodiumAndCfg(sodium0);
-  return toUrl(sodium.crypto_generichash(cfg.hashSize, msg));
+    const { sodium, cfg } = await getSodiumAndCfg(sodium0);
+    return toUrl(sodium.crypto_generichash(cfg.hashSize, msg));
 }
 
-export async function signMap(kp: SigningKeypairRaw, theMap: Record<string, Cannable>, overrides: undefined | Record<string, any>): Record<string, Canned> {
-  if (typeof overrides === 'undefined') {
-    overrides = {};
-  }
-  const opts0 = {
-    'proofField': 'proof',
-    'signatureField': 'signature',
-    'keyField': 'verificationMethod',
-    'keyFieldConstructor': async (pk: Uint8Array) => (await toUrl(pk)).encoded,
-    'ignore': ['id']
-  };
-  // Why Object.assign instead of spread here?
-  const opts = Object.assign({}, opts0, overrides);
-  var mut_theMap = { ...theMap };
-  opts['ignore'].reduce(
-    (acc, x) => delete (mut_theMap[x]), false
-  );
-  const toProve = { ...mut_theMap };
-  const canonicalClaim = canonicalise(toProve);
-  const detachedSignature = sign(JSON.stringify(canonicalClaim), kp);
-  const did = opts["keyFieldConstructor"](kp.public);
-  const issuer = did;
-  const proofMap =
+export async function signMap(
+    kp: SigningKeypair<Ureus>,
+    theMap: Record<string, Cannable>,
+    overrides: undefined | Record<string, any>
+): Promise<Record<string, Cannable>> {
+    if (typeof overrides === 'undefined') {
+        overrides = {};
+    }
+    const opts0 = {
+        proofField: 'proof',
+        signatureField: 'signature',
+        keyField: 'verificationMethod',
+        keyFieldConstructor: toString1,
+        ignore: ['id'],
+    };
+    // Why Object.assign instead of spread here?
+    const opts = Object.assign({}, opts0, overrides);
+    var mut_theMap = { ...theMap };
+    opts['ignore'].reduce((acc, x) => delete mut_theMap[x], false);
+    const toProve = { ...mut_theMap };
+    const canonicalClaim = canonicalise(toProve);
+    const detachedSignature = await sign(JSON.stringify(canonicalClaim), kp);
+    const did = await opts['keyFieldConstructor'](kp.public);
+    const issuer = did;
+    const proofMap: Proof<string> = await fromSignature(
+        issuer,
+        detachedSignature.signature,
+        'as string'
+    );
+    var res = { ...theMap };
+    res[opts.proofField] = proofMap;
+    return res;
 }
-*/
