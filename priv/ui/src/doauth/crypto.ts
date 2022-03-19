@@ -163,16 +163,35 @@ export async function deriveSigningKeypair<T extends Ureus>(
     };
 }
 
-/*
-export async function sign(msg: string, kp: SigningKeypairRaw): Promise<DetachedSignatureRaw> {
-  const sodium = await getSodium(sodium0);
-  return { public: kp.public, signature: sodium.crypto_sign_detached(msg, kp.secret) };
+export async function sign<T extends Ureus>(
+    msg: string,
+    kp: SigningKeypair<Ureus>,
+    t: undefined | T
+): Promise<DetachedSignature<T>> {
+    const sodium = await getSodium(sodium0);
+    const signature = sodium.crypto_sign_detached(
+        msg,
+        await toUnit8Array(kp.secret)
+    );
+    return {
+        public: (await toT(kp.public, t)) as T,
+        signature: (await toT(signature, t)) as T,
+    };
 }
 
-export async function verify(msg: string, detached: DetachedSignatureRaw): Promise<boolean> {
-  const sodium = await getSodium(sodium0);
-  return sodium.crypto_sign_verify_detached(detached.signature, msg, detached.public);
+export async function verify(
+    msg: string,
+    detached: DetachedSignature<Ureus>
+): Promise<boolean> {
+    const sodium = await getSodium(sodium0);
+    return sodium.crypto_sign_verify_detached(
+        await toUnit8Array(detached.signature),
+        msg,
+        await toUnit8Array(detached.public)
+    );
 }
+
+/*
 
 export async function blandHash(msg: string): Promise<Url> {
   const { sodium, cfg } = await getSodiumAndCfg(sodium0);
