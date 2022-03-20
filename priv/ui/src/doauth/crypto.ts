@@ -198,7 +198,7 @@ export async function blandHash(msg: string): Promise<Url> {
 export async function signMap(
     kp: SigningKeypair<Ureus>,
     theMap: Record<string, Cannable>,
-    overrides: undefined | Record<string, any>
+    overrides?: Record<string, any>
 ): Promise<Record<string, Cannable>> {
     if (typeof overrides === 'undefined') {
         overrides = {};
