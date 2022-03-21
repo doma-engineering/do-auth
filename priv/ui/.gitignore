@@ -23,3 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 
 .direnv
+
+# No idea what it is but some NPM stuff
+/target

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  sneakium:
+    image: 'domadev/sneakium:2022-03-21'
+    networks:
+      - sneak_link
+    depends_on:
+      - ui
+    command: bash -c "
+      apt -y install curl &&
+      sleep 30 &&
+      su user &&
+      cd /home/user &&
+      google-chrome --enable-logging --headless --disable-gpu --no-sandbox --dump-dom http://ui:3000
+      "
+  ui:
+    build: .
+    networks:
+      - sneak_link
+networks:
+  sneak_link:
+    driver: bridge
