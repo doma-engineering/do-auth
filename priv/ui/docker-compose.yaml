@@ -1,17 +1,20 @@
 version: '3'
+# IN VSCODE, PLEASE USE "SAVE WITHOUT FORMATTING" COMMAND: <F1> -> "Save without formatting"
 services:
     sneakium:
-        image: 'domadev/sneakium:2022-03-22'
+        image: 'domadev/sneakium:2022-03-23--1'
         networks:
             - sneak_link
         depends_on:
             - ui
+        volumes:
+            - .:/home/user/:rw
         command: bash -c "
             su user &&
             cd /home/user &&
             nc -l -p 12321 > /dev/null ;
             echo 'Got ready' ;
-            google-chrome --enable-logging --headless --disable-gpu --no-sandbox --dump-dom http://ui:3000 ;
+            WDIO_URL=ui ./node_modules/.bin/wdio ;
             sleep 1 ;
             echo 'Sending done' ;
             wget http://ui:12322/sneakium-done --timeout=0.01 --tries=1 --quiet
@@ -21,13 +24,19 @@ services:
         networks:
             - sneak_link
         command: bash -c "
-            node --require tsm ./run.ts SimpleRegister.tsx build ;
-            npx serve -s build & run_pid=$$! ;
+            ( node --require tsm ./run.ts TestReactDemo.tsx 2>&1 | grep 'issues found' | tee ./_webpack_status ) & run_pid=$$! ;
+            while true; do
+                read -t 0.1 ;
+                if [[ -f ./_webpack_status ]] ; then
+                    break ;
+                fi;
+            done ;
             sleep 2 ;
             echo 'Sending ready' ;
             wget http://sneakium:12321/ui-ready --timeout=0.01 --tries=1 --quiet &
             nc -l -p 12322 > /dev/null ;
             echo 'Got done' ;
+            rm ./_webpack_status ;
             kill $$run_pid
             "
 networks:
