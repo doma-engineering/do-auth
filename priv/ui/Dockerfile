@@ -1,10 +1,9 @@
-FROM node:17-alpine
-RUN adduser -D user
+FROM node:17
+RUN apt update
+RUN apt install -y netcat-openbsd
+RUN useradd -m user
 WORKDIR /home/user
 COPY --chown=user:user . /home/user/
 RUN su user
 RUN cd /home/user
-
-EXPOSE 3000
-
-ENTRYPOINT node --require tsm ./run.ts SimpleRegister.tsx
+RUN node --require tsm ./run.ts SimpleRegister.tsx build

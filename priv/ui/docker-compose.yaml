@@ -1,22 +1,35 @@
 version: '3'
 services:
-  sneakium:
-    image: 'domadev/sneakium:2022-03-21'
-    networks:
-      - sneak_link
-    depends_on:
-      - ui
-    command: bash -c "
-      apt -y install curl &&
-      sleep 30 &&
-      su user &&
-      cd /home/user &&
-      google-chrome --enable-logging --headless --disable-gpu --no-sandbox --dump-dom http://ui:3000
-      "
-  ui:
-    build: .
-    networks:
-      - sneak_link
+    sneakium:
+        image: 'domadev/sneakium:2022-03-22'
+        networks:
+            - sneak_link
+        depends_on:
+            - ui
+        command: bash -c "
+            su user &&
+            cd /home/user &&
+            nc -l -p 12321 > /dev/null ;
+            echo 'Got ready' ;
+            google-chrome --enable-logging --headless --disable-gpu --no-sandbox --dump-dom http://ui:3000 ;
+            sleep 1 ;
+            echo 'Sending done' ;
+            wget http://ui:12322/sneakium-done --timeout=0.01 --tries=1 --quiet
+            "
+    ui:
+        build: .
+        networks:
+            - sneak_link
+        command: bash -c "
+            node --require tsm ./run.ts SimpleRegister.tsx build ;
+            npx serve -s build & run_pid=$$! ;
+            sleep 2 ;
+            echo 'Sending ready' ;
+            wget http://sneakium:12321/ui-ready --timeout=0.01 --tries=1 --quiet &
+            nc -l -p 12322 > /dev/null ;
+            echo 'Got done' ;
+            kill $$run_pid
+            "
 networks:
-  sneak_link:
-    driver: bridge
+    sneak_link:
+        driver: bridge
