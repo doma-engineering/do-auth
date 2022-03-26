@@ -24,19 +24,23 @@ services:
         networks:
             - sneak_link
         command: bash -c "
-            ( node --require tsm ./run.ts TestReactDemo.tsx 2>&1 | grep 'issues found' | tee ./_webpack_status ) & run_pid=$$! ;
+            rm ./_webpack_* ;
+            ( node --require tsm ./run.ts TestReactDemo.tsx 2>&1 | stdbuf -oL grep -i 'issues found' | tee ./_webpack_status ) & run_pid=$$! ;
             while true; do
                 read -t 0.1 ;
-                if [[ -f ./_webpack_status ]] ; then
+                if [[ -f ./_webpack_status && \"$$(cat ./_webpack_status | wc -l)\" == \"1\" ]]; then
                     break ;
                 fi;
             done ;
             sleep 2 ;
+            echo "=========" ;
+            cat ./_webpack_status ;
+            echo "=========" ;
             echo 'Sending ready' ;
             wget http://sneakium:12321/ui-ready --timeout=0.01 --tries=1 --quiet &
             nc -l -p 12322 > /dev/null ;
             echo 'Got done' ;
-            rm ./_webpack_status ;
+            rm ./_webpack_* ;
             kill $$run_pid
             "
 networks:
