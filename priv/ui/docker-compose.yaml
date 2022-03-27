@@ -8,7 +8,7 @@ services:
         depends_on:
             - ui
         volumes:
-            - .:/home/user/:rw
+            - .:/home/user/:ro
         command: bash -c "
             su user &&
             cd /home/user &&
@@ -27,10 +27,10 @@ services:
             rm ./_webpack_* ;
             ( node --require tsm ./run.ts TestReactDemo.tsx 2>&1 | stdbuf -oL grep -i 'issues found' | tee ./_webpack_status ) & run_pid=$$! ;
             while true; do
-                read -t 0.1 ;
-                if [[ -f ./_webpack_status && \"$$(cat ./_webpack_status | wc -l)\" == \"1\" ]]; then
-                    break ;
-                fi;
+            read -t 0.1 ;
+            if [[ -f ./_webpack_status && \"$$(cat ./_webpack_status | wc -l)\" == \"1\" ]]; then
+            break ;
+            fi;
             done ;
             sleep 2 ;
             echo "=========" ;
