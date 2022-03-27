@@ -8,13 +8,14 @@ services:
         depends_on:
             - ui
         volumes:
-            - .:/home/user/:ro
+            - .:/home/user/:rw
         command: bash -c "
             su user &&
             cd /home/user &&
             nc -l -p 12321 > /dev/null ;
             echo 'Got ready' ;
-            WDIO_URL=ui ./node_modules/.bin/wdio ;
+            WDIO_URL=ui ./node_modules/.bin/wdio && echo -n "OK" > ./_wdio_result || echo -n "KO" > ./_wdio_result ;
+            chmod go+rw ./_wdio_result ;
             sleep 1 ;
             echo 'Sending done' ;
             wget http://ui:12322/sneakium-done --timeout=0.01 --tries=1 --quiet
@@ -24,7 +25,6 @@ services:
         networks:
             - sneak_link
         command: bash -c "
-            rm ./_webpack_* ;
             ( node --require tsm ./run.ts TestReactDemo.tsx 2>&1 | stdbuf -oL grep -i 'issues found' | tee ./_webpack_status ) & run_pid=$$! ;
             while true; do
             read -t 0.1 ;

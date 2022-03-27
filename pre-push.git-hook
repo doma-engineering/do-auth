@@ -6,4 +6,5 @@ set -xeuo pipefail
 
 mix test
 mix dialyzer
-#mix credo
+cd priv/ui
+./wdio.sh
