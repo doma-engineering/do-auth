@@ -10,11 +10,12 @@ services:
         volumes:
             - .:/home/user/:rw
         command: bash -c "
+            echo 'Started sneakium component' ;
             su user &&
             cd /home/user &&
             nc -l -p 12321 > /dev/null ;
             echo 'Got ready' ;
-            WDIO_URL=ui ./node_modules/.bin/wdio && echo -n "OK" > ./_wdio_result || echo -n "KO" > ./_wdio_result ;
+            WDIO_URL=ui ./node_modules/.bin/wdio && echo -n 'OK' > ./_wdio_result || echo -n 'KO' > ./_wdio_result ;
             chmod go+rw ./_wdio_result ;
             sleep 1 ;
             echo 'Sending done' ;
@@ -25,10 +26,13 @@ services:
         networks:
             - sneak_link
         command: bash -c "
-            ( node --require tsm ./run.ts TestReactDemo.tsx 2>&1 | stdbuf -oL grep -i 'issues found' | tee ./_webpack_status ) & run_pid=$$! ;
+            echo -n 'Started ui component ' ;
+            echo ${RUNTS_ENDPOINT:-App.tsx} ;
+            rm ./_webpack_* 2> /dev/null;
+            ( node --require tsm ./run.ts  ${RUNTS_ENDPOINT:-App.tsx} 2>&1 | stdbuf -oL grep 'compiled successfully\\|issues found' | tee ./_webpack_status ) & run_pid=$$! ;
             while true; do
                 read -t 0.1 ;
-                if [[ -f ./_webpack_status && \"$$(cat ./_webpack_status | wc -l)\" == \"1\" ]]; then
+                if [[ -f ./_webpack_status && ( \"$$(cat ./_webpack_status | wc -l)\" == \"1\" || \"$$(cat ./_webpack_status | wc -l)\" == \"2\" ) ]]; then
                     break ;
                 fi;
             done ;
