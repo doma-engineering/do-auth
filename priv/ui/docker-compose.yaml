@@ -32,8 +32,11 @@ services:
             ( node --require tsm ./run.ts  ${RUNTS_ENDPOINT:-App.tsx} 2>&1 | stdbuf -oL grep 'compiled successfully\\|issues found' | tee ./_webpack_status ) & run_pid=$$! ;
             while true; do
                 read -t 0.1 ;
-                if [[ -f ./_webpack_status && ( \"$$(cat ./_webpack_status | wc -l)\" == \"1\" || \"$$(cat ./_webpack_status | wc -l)\" == \"2\" ) ]]; then
-                    break ;
+                if [[ -f ./_webpack_status ]]; then
+                    _x=\"$$(cat ./_webpack_status | wc -l)\" ;
+                    if [ $$_x -gt 0 ]; then
+                        break ;
+                    fi
                 fi;
             done ;
             sleep 2 ;
