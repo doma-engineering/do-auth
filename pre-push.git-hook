@@ -7,4 +7,5 @@ set -xeuo pipefail
 mix test
 mix dialyzer
 cd priv/ui
+npm test
 ./wdio.sh
