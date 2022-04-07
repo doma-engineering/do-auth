@@ -1,4 +1,4 @@
-const assert = require('assert/strict');
+import assert, { equal } from 'assert/strict';
 
 const WDIO_URL = process.env.WDIO_URL || 'localhost';
 
@@ -13,7 +13,7 @@ describe('wdio', () => {
         try {
             await browser.url(`http://${WDIO_URL}:3000`);
         } catch (e) {
-            assert.equal(e.name, 'unknown error'); // Nice meme, wdio! Love it when things get forgotten.
+            equal(e.name, 'unknown error'); // Nice meme, wdio! Love it when things get forgotten.
             // That said, if url isn't in browser and isn't a funciton, we'll get a TypeError, so this test isn't completely useless.
 
             // assert(JSON.stringify(e).includes('net::ERR_CONNECTION_REFUSED'));
@@ -30,7 +30,7 @@ describe('wdio', () => {
             await $('#root').getHTML(),
             punch
         );
-        assert.equal(loadingComponents.length, 1);
+        equal(loadingComponents.length, 1);
         // TODO: https://github.com/webdriverio/wdio-wait-for
     });
 });
