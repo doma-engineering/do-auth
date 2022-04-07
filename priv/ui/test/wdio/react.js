@@ -21,7 +21,7 @@ describe('wdio', () => {
     });
     it('can test a react app', async () => {
         await browser.url(`http://${WDIO_URL}:3000`);
-        loadingComponents = await browser.react$$('TestReactDemo');
+        const loadingComponents = await browser.react$$('TestReactDemo');
         console.warn(
             punch,
             JSON.stringify(loadingComponents),
