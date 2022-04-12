@@ -1,16 +1,16 @@
-import { toString1, Ureus } from './base';
+import { extractEncoded, Ureu } from './base';
 import { Cannable, SigningKeypair, signMap } from './crypto';
 import { isoUtcNow } from './util';
 
 export async function mkCredential(
-    kp: SigningKeypair<Ureus>,
+    kp: SigningKeypair<Ureu>,
     payloadMap: Record<string, Cannable>,
     meta?: Record<string, unknown>
 ): Promise<Record<string, Cannable>> {
     // We use datetime strings, but probably, moving forward, we need to accept
     // JS Date objects like Elixir implementation does.
     const tau0 = isoUtcNow();
-    const issuer = await toString1(kp.public);
+    const issuer = await extractEncoded(kp.public);
     var credSoFar: Record<string, Cannable> = {
         '@context': [],
         type: [],
@@ -34,13 +34,13 @@ export async function mkCredential(
 }
 
 export async function presentCredential(
-    kp: SigningKeypair<Ureus>,
+    kp: SigningKeypair<Ureu>,
     cred: Record<string, Cannable>,
     meta?: Record<string, unknown>
 ): Promise<Record<string, Cannable>> {
     var presentationClaimSoFar: Record<string, Cannable> = {
         verifiableCredential: cred,
-        issuer: await toString1(kp.public),
+        issuer: await extractEncoded(kp.public),
     };
     if (typeof meta !== 'undefined') {
         ['id', 'holder', 'credentialSubject'].forEach((x) => {

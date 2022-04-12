@@ -3,13 +3,13 @@ import {
     toUrl,
     Encoded,
     Url,
-    Ureus,
+    Ureu,
     toRaw,
     toUnit8Array,
     toT,
-    toString1,
+    extractEncoded,
 } from './base';
-import { fromSignature, Proof } from './proof';
+import { fromSignature, isProof, Proof } from './proof';
 
 export type Canned = number | bigint | string | Canned[][] | Canned[];
 export type Canonicalised = Canned;
@@ -27,7 +27,7 @@ export function canonicalise(x: Cannable): Canned {
         // Silence warnings with noops
         ((x) => x)([pre, post]);
         //// Uncomment this to do some manual testing
-        //console.debug(pre || "", JSON.stringify(x, null, 2), post || "");
+        //console.warn(pre || '', JSON.stringify(x, null, 2), post || '');
         return x;
     };
     traceRet(x, 'Canonicalising ');
@@ -40,7 +40,10 @@ export function canonicalise(x: Cannable): Canned {
     } else if (Array.isArray(x)) {
         return x.map(canonicalise);
     } else {
-        traceRet('Got an object that extends Record<string, Cannable>');
+        traceRet([
+            'Got an object that extends Record<string, Cannable>',
+            JSON.stringify(x),
+        ]);
         return Object.entries(x)
             .sort()
             .map(([k, v]) => [traceRet(k, 'Processing key '), canonicalise(v)]);
@@ -100,14 +103,21 @@ export function slipConfig(config: Config): SlipConfig {
     };
 }
 
-export async function mainKeyFromLocalStorageSlip(pass: string) {
-    const slipMaybe = localStorage.getItem('doauth_slip');
+export async function mainKeyFromLocalStorageSlip(
+    pass: string
+): Promise<Uint8Array> {
+    let slipMaybe = null;
+    if (typeof window !== 'undefined') {
+        slipMaybe = localStorage.getItem('doauth_slip');
+    }
     if (slipMaybe) {
         return mainKeyReproduce(pass, JSON.parse(slipMaybe));
     } else {
         const { cfg } = await getSodiumAndCfg(sodium0);
-        const [mkey, slip] = await mainKeyInit(pass, slipConfig(cfg));
-        localStorage.setItem('doauth_slip', JSON.stringify(slip));
+        const { mkey, slip } = await mainKeyInit(pass, slipConfig(cfg));
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('doauth_slip', JSON.stringify(slip));
+        }
         return mkey;
     }
 }
@@ -129,24 +139,27 @@ export async function mainKeyReproduce(
     );
 }
 
-export async function mainKeyInit(pass: string, scfg: SlipConfig) {
+export async function mainKeyInit(
+    pass: string,
+    scfg: SlipConfig
+): Promise<{ mkey: Uint8Array; slip: Slip }> {
     const sodium = await getSodium(sodium0);
     const { encoded } = await toUrl(sodium.randombytes_buf(scfg.saltSize));
     const slip = {
         ...scfg,
         salt: { encoded },
     };
-    const mkey = mainKeyReproduce(pass, slip);
-    return [mkey, slip];
+    const mkey = await mainKeyReproduce(pass, slip);
+    return { mkey, slip };
 }
 
-// With "Ureus" we're trying something new, which is basically duck-typing.
+// With "Ureu" we're trying something new, which is basically duck-typing.
 // I'm not too happy about accepting unwrapped, unvalidated strings / unit8arrays here, so perhaps the approach we take in Elixir is better.
 // This approach guarantees no mess though and prevents from making a function per data acceptable underlying data type.
-export async function deriveSigningKeypair<T extends Ureus>(
-    mkey: Ureus,
+export async function deriveSigningKeypair<T extends Ureu>(
+    mkey: Ureu,
     n: number,
-    t: undefined | T
+    t?: undefined | T
 ): Promise<SigningKeypair<T>> {
     const { sodium, cfg } = await getSodiumAndCfg(sodium0);
     const mkd = sodium.crypto_kdf_derive_from_key(
@@ -162,9 +175,9 @@ export async function deriveSigningKeypair<T extends Ureus>(
     };
 }
 
-export async function sign<T extends Ureus>(
+export async function sign<T extends Ureu>(
     msg: string,
-    kp: SigningKeypair<Ureus>,
+    kp: SigningKeypair<Ureu>,
     t?: T
 ): Promise<DetachedSignature<T>> {
     const sodium = await getSodium(sodium0);
@@ -180,7 +193,7 @@ export async function sign<T extends Ureus>(
 
 export async function verify(
     msg: string,
-    detached: DetachedSignature<Ureus>
+    detached: DetachedSignature<Ureu>
 ): Promise<boolean> {
     const sodium = await getSodium(sodium0);
     return sodium.crypto_sign_verify_detached(
@@ -196,7 +209,7 @@ export async function blandHash(msg: string): Promise<Url> {
 }
 
 export async function signMap(
-    kp: SigningKeypair<Ureus>,
+    kp: SigningKeypair<Ureu>,
     theMap: Record<string, Cannable>,
     overrides?: Record<string, any>
 ): Promise<Record<string, Cannable>> {
@@ -207,13 +220,13 @@ export async function signMap(
         proofField: 'proof',
         signatureField: 'signature',
         keyField: 'verificationMethod',
-        keyFieldConstructor: toString1,
+        keyFieldConstructor: extractEncoded,
         ignore: ['id'],
     };
     // Why Object.assign instead of spread here?
     const opts = Object.assign({}, opts0, overrides);
     var mut_theMap = { ...theMap };
-    opts['ignore'].reduce((acc, x) => delete mut_theMap[x], false);
+    opts['ignore'].forEach((x) => delete mut_theMap[x], false);
     const toProve = { ...mut_theMap };
     const canonicalClaim = canonicalise(toProve);
     const detachedSignature = await sign(JSON.stringify(canonicalClaim), kp);
@@ -222,9 +235,71 @@ export async function signMap(
     const proofMap: Proof<string> = await fromSignature(
         issuer,
         detachedSignature.signature,
-        'as string'
+        'extract encoded'
     );
     var res = { ...theMap };
     res[opts.proofField] = proofMap;
     return res;
+}
+
+export async function verifyMap(
+    verifiable_map: Record<string, Cannable>,
+    overrides?: Record<string, any>
+): Promise<boolean> {
+    if (typeof overrides === 'undefined') {
+        overrides = {};
+    }
+
+    const opts0 = {
+        proofField: 'proof',
+        signatureField: 'signature',
+        //"keyExtractor": (proof) => doauthor.did.fetchPublicKey(proof["verificationMethod"]),
+        keyExtractor: (proof: Proof<string>) => proof.verificationMethod,
+        ignore: ['id'],
+    };
+
+    const opts = Object.assign({}, opts0, overrides);
+
+    var mut_verifiable_map = { ...verifiable_map };
+
+    const verifiable_canonical = canonicalise(
+        (() => {
+            opts['ignore'].concat([opts['proofField']]).forEach((x) => {
+                delete mut_verifiable_map[x];
+            });
+            return { ...mut_verifiable_map };
+        })()
+    );
+
+    let mut_proofs = [];
+
+    let focus_at_proofs = verifiable_map[opts['proofField']];
+
+    if (Array.isArray(focus_at_proofs)) {
+        mut_proofs = [...focus_at_proofs];
+    } else {
+        mut_proofs = [focus_at_proofs];
+    }
+
+    const proofs = [...mut_proofs];
+
+    return await proofs.reduce(async (acc, proof) => {
+        const acc1 = await acc;
+        if (!acc1) {
+            return false;
+        }
+        if (isProof<string>(proof)) {
+            const pk = opts.keyExtractor(proof);
+            const sig = proof.signature;
+            const reconstructedDetachedSig = {
+                public: await toRaw({ encoded: pk }),
+                signature: await toRaw({ encoded: sig }),
+            };
+            return verify(
+                JSON.stringify(verifiable_canonical),
+                reconstructedDetachedSig
+            );
+        }
+        return false;
+    }, (async () => true)());
 }

@@ -10,9 +10,9 @@ export interface Encoded {
 
 export interface Url extends Raw, Encoded {}
 
-export type Ureus = Uint8Array | Raw | Encoded | Url | string;
+export type Ureu = Uint8Array | Raw | Encoded | Url;
 
-export async function toUrl(x: Ureus): Promise<Url> {
+export async function toUrl(x: Ureu): Promise<Url> {
     if (isUrl(x)) {
         return x;
     }
@@ -25,27 +25,14 @@ export async function toUrl(x: Ureus): Promise<Url> {
             encoded: sodium.to_base64(x, sodium.base64_variants['URLSAFE']),
         };
     }
-    // S
-    if (typeof x === 'string') {
-        return {
-            raw: sodium.from_base64(x, sodium.base64_variants['URLSAFE']),
-            encoded: x,
-        };
-    }
     // RU
     if (isRaw(x)) {
         return toUrl(x.raw);
     }
     // E
-    return toUrl(x.encoded);
-}
-
-export async function fromString(x: string): Promise<Url> {
-    await sodium0.ready;
-    const sodium = sodium0;
     return {
-        raw: sodium.from_base64(x, sodium.base64_variants['URLSAFE']),
-        encoded: x,
+        raw: sodium.from_base64(x.encoded, sodium.base64_variants['URLSAFE']),
+        encoded: x.encoded,
     };
 }
 
@@ -65,33 +52,29 @@ export const raw0: Raw = { raw: new Uint8Array() };
 export const encoded0: Encoded = { encoded: '' };
 export const url0: Url = { raw: raw0.raw, encoded: encoded0.encoded };
 
-export async function toRaw(x: Ureus): Promise<Raw> {
+export async function toRaw(x: Ureu): Promise<Raw> {
     return { raw: (await toUrl(x)).raw };
 }
 
-export async function toEncoded(x: Ureus): Promise<Encoded> {
+export async function toEncoded(x: Ureu): Promise<Encoded> {
     return { encoded: (await toUrl(x)).encoded };
 }
 
-export async function toString1(x: Ureus): Promise<string> {
-    return (await toUrl(x)).encoded;
-}
-
-export async function toUnit8Array(x: Ureus): Promise<Uint8Array> {
+export async function toUnit8Array(x: Ureu): Promise<Uint8Array> {
     return (await toUrl(x)).raw;
 }
 
-export async function toT<T extends Ureus>(
-    x: Ureus,
-    t: undefined | T
-): Promise<T> {
+export async function extractEncoded(x: Ureu): Promise<string> {
+    return (await toUrl(x)).encoded;
+}
+
+export async function toT<T extends Ureu | string>(
+    x: Ureu,
+    t: undefined | T | string
+): Promise<T | string> {
     // U
     if (typeof t === 'undefined' || isUrl(t)) {
         return (await toUrl(x)) as T;
-    }
-    // S
-    if (typeof t === 'string') {
-        return (await toString1(x)) as T;
     }
     // E
     if (isEncoded(t)) {
@@ -100,6 +83,9 @@ export async function toT<T extends Ureus>(
     // R
     if (isRaw(t)) {
         return (await toRaw(x)) as T;
+    }
+    if (typeof t === 'string') {
+        return await extractEncoded(x);
     }
     // U
     return (await toUnit8Array(x)) as T;
