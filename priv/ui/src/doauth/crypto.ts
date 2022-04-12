@@ -1,4 +1,4 @@
-import * as sodium0 from 'libsodium-wrappers';
+import sodium0 from 'libsodium-wrappers';
 import {
     toUrl,
     Encoded,
