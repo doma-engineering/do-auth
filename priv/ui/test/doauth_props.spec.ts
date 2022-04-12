@@ -1,6 +1,7 @@
 import sodium0 from 'libsodium-wrappers';
 import { testProp, fc } from 'jest-fast-check';
 import { test, expect } from '@jest/globals';
+import { mkCredential, presentCredential } from '../src/doauth/credential';
 import { toUrl } from '../src/doauth/base';
 import {
     blandHash,
@@ -13,6 +14,101 @@ import {
     verifyMap,
 } from '../src/doauth/crypto';
 import { performance } from 'perf_hooks';
+
+/*
+    iex(18)> DoAuth.Credential.present_credential_map(kp, cred_map, issuanceDate: tau1) |> Uptight.Result.from_ok() |> Jason.encode!(pretty: true) |> IO.puts
+    {
+    "issuanceDate": "2021-12-19T02:31:30Z",
+    "issuer": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=",
+    "proof": {
+        "signature": "RYa98wyKQ8Gl2GrtYVxUFXPs7m9PFL9wT09xv368dJzK9aJIJ8gZreiugOuKCLtljFex2QWH58Az79x99PyGAg==",
+        "timestamp": "2021-12-19 04:05:50.471122Z",
+        "verificationMethod": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ="
+    },
+    "verifiableCredential": {
+        "@context": [],
+        "credentialSubject": {
+        "hello": "world"
+        },
+        "id": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+        "issuanceDate": "2021-08-17T22:49:56Z",
+        "issuer": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=",
+        "proof": {
+        "created": "2021-12-07T13:57:55.931383Z",
+        "proofPurpose": "assertionMethod",
+        "signature": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+        "type": "Libsodium2021",
+        "verificationMethod": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ="
+        },
+        "type": []
+    }
+    }
+*/
+const presentationTarget = `{
+    "issuanceDate": "2021-12-19T02:31:30Z",
+    "issuer": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=",
+    "proof": {
+      "signature": "RYa98wyKQ8Gl2GrtYVxUFXPs7m9PFL9wT09xv368dJzK9aJIJ8gZreiugOuKCLtljFex2QWH58Az79x99PyGAg==",
+      "timestamp": "2021-12-19 04:05:50.471122Z",
+      "verificationMethod": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ="
+    },
+    "verifiableCredential": {
+      "@context": [],
+      "credentialSubject": {
+        "hello": "world"
+      },
+      "id": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+      "issuanceDate": "2021-08-17T22:49:56Z",
+      "issuer": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=",
+      "proof": {
+        "created": "2021-12-07T13:57:55.931383Z",
+        "proofPurpose": "assertionMethod",
+        "signature": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+        "type": "Libsodium2021",
+        "verificationMethod": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ="
+      },
+      "type": []
+    }
+}`;
+
+/*
+    iex(19)> %{public: "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=", secret: "H9xUHnIAxdYuslQ8UULO8A0eXf6gH2ySEfo2-kdZZow32Nza1n_O_YdP4Qg7JuCbt8ieMOZkFypb-UbAWVLKCg=="} |> Witchcraft.Functor.map(fn x -> Uptight.Base.mk_url!(x).raw |> Uptight.Binary.new!() end) |> DoAuth.Credential.mk_credential!(%{"hello" => "world"}, issuanceDate: ~N[2021-08-17 22:49:56] |> DateTime.from_naive!("Etc/UTC")) |> Jason.encode!(pretty: true) |> IO.puts()
+    {
+    "@context": [],
+    "credentialSubject": {
+        "hello": "world"
+    },
+    "id": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+    "issuanceDate": "2021-08-17T22:49:56Z",
+    "issuer": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=",
+    "proof": {
+        "created": "2021-12-07T13:57:55.931383Z",
+        "proofPurpose": "assertionMethod",
+        "signature": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+        "type": "Libsodium2021",
+        "verificationMethod": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ="
+    },
+    "type": []
+    }
+    :ok
+*/
+const credentialTarget = `{
+    "@context": [],
+    "credentialSubject": {
+        "hello": "world"
+    },
+    "id": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+    "issuanceDate": "2021-08-17T22:49:56Z",
+    "issuer": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=",
+    "proof": {
+        "created": "2021-12-07T13:57:55.931383Z",
+        "proofPurpose": "assertionMethod",
+        "signature": "5rQ5V1M3QzCCFOH_w1xu0ondNWLyn8sd4-p3-AiS3GXKLjO4J4BUWLM1xH-CfFcd-LPj-ys908SjHMa-WOq-AA==",
+        "type": "Libsodium2021",
+        "verificationMethod": "dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ="
+    },
+    "type": []
+}`;
 
 // This should actually be checked in browser but ok
 test('libsodium loads fast', async () => {
@@ -87,3 +183,40 @@ testProp(
         expect(await verifyMap(vxkv)).toBe(true);
     }
 );
+
+test('verifiable credentials are compatible with Elixir implementation', async () => {
+    const kp = {
+        public: { encoded: 'dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=' },
+        secret: {
+            encoded:
+                'H9xUHnIAxdYuslQ8UULO8A0eXf6gH2ySEfo2-kdZZow32Nza1n_O_YdP4Qg7JuCbt8ieMOZkFypb-UbAWVLKCg==',
+        },
+    };
+    const cred_ours = await mkCredential(
+        kp,
+        { hello: 'world' },
+        { issuanceDate: '2021-08-17T22:49:56Z' }
+    );
+    const cred_ref = JSON.parse(credentialTarget);
+    expect((cred_ours['proof'] as any)['signature']).toStrictEqual(
+        (cred_ref['proof'] as any)['signature']
+    );
+});
+
+test('verifiable presentations are compatible with Elixir implementation', async () => {
+    const kp = {
+        public: { encoded: 'dW8Z2z2icecILIyAdrjaOqkurfC99ocFR87r9QX_mJQ=' },
+        secret: {
+            encoded:
+                'H9xUHnIAxdYuslQ8UULO8A0eXf6gH2ySEfo2-kdZZow32Nza1n_O_YdP4Qg7JuCbt8ieMOZkFypb-UbAWVLKCg==',
+        },
+    };
+    const cred = JSON.parse(credentialTarget);
+    const pres_ours = await presentCredential(kp, cred, {
+        issuanceDate: '2021-12-19T02:31:30Z',
+    });
+    const pres_ref = JSON.parse(presentationTarget);
+    const our_sig = (pres_ours['proof'] as any)['signature'];
+    const ref_sig = (pres_ref['proof'] as any)['signature'];
+    expect(our_sig).toStrictEqual(ref_sig);
+});
