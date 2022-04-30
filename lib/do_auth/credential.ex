@@ -7,7 +7,6 @@ defmodule DoAuth.Credential do
   use GenServer
   alias Uptight.Base, as: B
   alias Uptight.Text, as: T
-  # alias Uptight.Binary
   alias Uptight.Result
 
   alias DoAuth.Crypto
@@ -54,8 +53,6 @@ defmodule DoAuth.Credential do
 
     tau_oput = &DynHacks.put_new_value(&1, &2, tau_oget.(&2))
     tau_oput! = &DynHacks.put_value(&1, &2, tau_oget.(&2))
-    ### DEPRECATION, LEFT COMMENTED OUT CODE FOR GIT LOG TRANSPARENCY ######################
-    # oput2 = &DynHacks.put_new_value(&1, &2, oget.(&3))
     oput! = &DynHacks.put_new_value(&1, &2, oget.(&2))
 
     cred_so_far =
@@ -70,9 +67,6 @@ defmodule DoAuth.Credential do
       |> tau_oput.("effectiveDate")
       |> tau_oput.("validFrom")
       |> tau_oput.("validUntil")
-      ### DEPRECATION, LEFT COMMENTED OUT CODE FOR GIT LOG TRANSPARENCY ####################
-      # |> oput2.("id", "location")
-      # |> oput!.("id")
       |> oput!.("amendingKeys")
       |> oput!.("type")
 
@@ -86,17 +80,6 @@ defmodule DoAuth.Credential do
       end
 
     proof = mk_proof(kp, cred_so_far, opts)
-
-    ### DEPRECATION, LEFT COMMENTED OUT CODE FOR GIT LOG TRANSPARENCY #######################
-    # # I think that ID is a horrible feature and we should probably just get rid of it.
-    # id =
-    #   case Map.get(cred_so_far, "id") do
-    #     nil ->
-    #       proof["signature"]
-
-    #     x ->
-    #       x
-    #   end
 
     cred_so_far |> Map.put("proof", proof) |> Map.put("id", proof["signature"])
   end
@@ -113,7 +96,6 @@ defmodule DoAuth.Credential do
         ) :: Result.t()
   def present_credential_map(%{public: pk} = kp, %{} = credential_map, opts \\ []) do
     Result.new(fn ->
-      # p! = &DynHacks.put_value/3
       p = &DynHacks.put_new_value(&1, &2, &3)
       o = &Keyword.get(opts, &1)
       oget = &Keyword.get(opts, &1 |> String.to_atom())
@@ -255,7 +237,7 @@ defmodule DoAuth.Credential do
   #### SEVER BACKEND ############################################################################
 
   @spec handle_call(tuple, {pid, any()}, state()) :: {:reply, any(), state()}
-  ## mk_credential <~ transact_cred #############################################################
+  ## mk_credential <~ transact_cred or transact_present #########################################
   def handle_call(
         {mk_or_present_cred, kp, payload_map, opts},
         _from,
@@ -329,7 +311,6 @@ defmodule DoAuth.Credential do
 
   def handle_call({:get, id, mode}, _from, %__MODULE__{credentials: cs, amendments: ams})
       when mode == :just_the_tip or mode == :all do
-    # Cache this?
     case get_credential_chain(id, cs, ams) do
       [res | _] = xs -> (mode == :all && xs) || res
       _otherwise -> nil
