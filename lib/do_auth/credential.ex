@@ -1,136 +1,36 @@
 defmodule DoAuth.Credential do
   @moduledoc """
-  Generic verifiable credentials server.
+  Generic verifiable credentials server and library functions to make and operate those.
+
+  Please write as little as possible here, instead make your own GenServers that will write down and navigate domain-specific credentials.
   """
   use GenServer
   alias Uptight.Base, as: B
   alias Uptight.Text, as: T
-  alias Uptight.Binary
+  # alias Uptight.Binary
   alias Uptight.Result
 
   alias DoAuth.Crypto
 
-  @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
-  def start_link(init_args) do
-    GenServer.start_link(__MODULE__, [init_args], name: __MODULE__)
-  end
+  defstruct credentials: %{}, amendments: %{}, known_payloads: %{}
+  @type state :: %__MODULE__{}
 
-  @spec init(any) :: {:ok, map()}
-  def init(_args) do
-    {:ok, %{}}
-  end
+  #### PURE LIBRARY FUNCTIONS, SORTED BY IMPORTANCE ##############################################
 
-  @spec content(map) :: map
-  def content(cred) do
-    cred["credentialSubject"]
-  end
+  @doc """
+  Takes a binary public key embedded into a keypair, payload map aka rich "credentialSubject" and some options, meaningful ones are:
 
-  @spec sig(map) :: B.Urlsafe.t()
-  def sig(cred) do
-    cred["proof"]["signature"] |> B.mk_url!()
-  end
+      + :issuanceDate :: Date.t() as string
+      + :effectiveDate :: Date.t() as string
+      + :validFrom :: Date.t() as string
+      + :validUntil :: Date.t() as string
+      + :id (trumps synonymous :location) :: base64 encoded thing that can be used to address the credential stored on a server
+      + :amendingKeys :: [base64 (public keys)] list of keys that can issue verifiable amendments to the server
 
-  @spec pk(map) :: B.Urlsafe.t()
-  def pk(cred) do
-    cred["proof"]["verificationMethod"] |> B.mk_url!()
-  end
-
-  @spec transact_with_keypair_from_payload_map!(Crypto.keypair_opt(), map(), keyword()) ::
-          {:reply, map(), list()}
-  def transact_with_keypair_from_payload_map!(kp, payload_map, opts \\ []) do
-    GenServer.call(__MODULE__, {:mk_credential, kp, payload_map, opts})
-  end
-
-  @spec handle_call(tuple, {pid, any()}, list) :: {:reply, any(), list()}
-  def handle_call({:mk_credential, kp, payload_map, opts}, _from, state) do
-    mk_cred = fn ->
-      mk_credential!(kp, payload_map, opts)
-    end
-
-    cred =
-      if opts[:persist] |> is_nil() do
-        mk_cred.()
-      else
-        res = Map.get_lazy(state, key_from_subject(payload_map), mk_cred)
-        GenServer.cast(__MODULE__, {:persist, res})
-        res
-      end
-
-    {:reply, cred, state}
-  end
-
-  defp key_from_subject(payload_map) do
-    %{"verifiableCredential" => nil, "credentialSubject" => payload_map}
-  end
-
-  def handle_cast({:persist, cred}, state) do
-    {:noreply,
-     Map.put_new(
-       state,
-       # TODO: While we appreciate deduplication effort, we should reduce storage overhead at some point here.
-       # Furthermore, akin to invite storage system, we should track creds based on the signatures here
-       %{
-         "verifiableCredential" => cred["verifiableCredential"],
-         "credentialSubject" => cred["credentialSubject"]
-       },
-       cred
-     )}
-  end
-
-  @spec present_credential_map!(
-          Crypto.keypair_opt(),
-          map(),
-          list()
-        ) :: map
-  def present_credential_map!(kp, credential_map, opts \\ []) do
-    present_credential_map(kp, credential_map, opts) |> Result.from_ok()
-  end
-
-  @spec present_credential_map(
-          Crypto.keypair_opt(),
-          map(),
-          list()
-        ) :: Result.t()
-  def present_credential_map(%{public: pk} = kp, %{} = credential_map, opts \\ []) do
-    Result.new(fn ->
-      p = &DynHacks.put_new_value(&1, &2, &3)
-      o = &Keyword.get(opts, &1)
-      oget = &Keyword.get(opts, &1 |> String.to_atom())
-
-      tau_oget = fn x ->
-        time_getter(x, oget)
-      end
-
-      tau_oput! = &DynHacks.put_value(&1, &2, tau_oget.(&2))
-
-      issuer_str = pk |> B.safe!() |> Map.get(:encoded)
-
-      presentation_claim =
-        %{
-          "verifiableCredential" => credential_map,
-          "issuer" => issuer_str
-        }
-        |> p.("id", o.(:location))
-        |> p.("holder", o.(:holder))
-        |> p.("credentialSubject", o.(:credential_subject))
-        |> tau_oput!.("issuanceDate")
-
-      Crypto.sign_map!(kp, presentation_claim, opts)
-    end)
-  end
-
-  defp time_getter(x, oget) do
-    tau_maybe = oget.(x)
-
-    case tau_maybe do
-      x = %{} -> DateTime.to_iso8601(x)
-      otherwise -> otherwise
-    end
-  end
-
+  """
   @spec mk_credential!(
           %{:public => Uptight.Binary.t(), optional(any) => any},
-          any,
+          map,
           keyword
         ) :: map
   def mk_credential!(
@@ -154,12 +54,14 @@ defmodule DoAuth.Credential do
 
     tau_oput = &DynHacks.put_new_value(&1, &2, tau_oget.(&2))
     tau_oput! = &DynHacks.put_value(&1, &2, tau_oget.(&2))
-    oput2 = &DynHacks.put_new_value(&1, &2, oget.(&3))
+    ### DEPRECATION, LEFT COMMENTED OUT CODE FOR GIT LOG TRANSPARENCY ######################
+    # oput2 = &DynHacks.put_new_value(&1, &2, oget.(&3))
+    oput! = &DynHacks.put_new_value(&1, &2, oget.(&2))
 
     cred_so_far =
       %{
         "@context" => [],
-        "type" => [],
+        "type" => "fact",
         "issuer" => issuer,
         "issuanceDate" => tau0,
         "credentialSubject" => payload_map
@@ -168,22 +70,329 @@ defmodule DoAuth.Credential do
       |> tau_oput.("effectiveDate")
       |> tau_oput.("validFrom")
       |> tau_oput.("validUntil")
-      |> oput2.("id", "location")
+      ### DEPRECATION, LEFT COMMENTED OUT CODE FOR GIT LOG TRANSPARENCY ####################
+      # |> oput2.("id", "location")
+      # |> oput!.("id")
+      |> oput!.("amendingKeys")
+      |> oput!.("type")
 
-    proof =
-      mk_signature_with_opts(kp, cred_so_far, opts) |> proof_from_raw_sig(issuer, tau0, opts)
-
-    # I think that ID is a horrible feature and we should probably just get rid of it.
-    id =
-      case Map.get(cred_so_far, "id") do
-        nil ->
-          proof["signature"]
-
-        x ->
-          x
+    cred_so_far =
+      if :amends in opts do
+        cred_so_far
+        |> Map.put("type", "amendment")
+        |> Map.put("amends", Keyword.get(opts, :amends))
+      else
+        cred_so_far
       end
 
-    cred_so_far |> Map.put("proof", proof) |> Map.put("id", id)
+    proof = mk_proof(kp, cred_so_far, opts)
+
+    ### DEPRECATION, LEFT COMMENTED OUT CODE FOR GIT LOG TRANSPARENCY #######################
+    # # I think that ID is a horrible feature and we should probably just get rid of it.
+    # id =
+    #   case Map.get(cred_so_far, "id") do
+    #     nil ->
+    #       proof["signature"]
+
+    #     x ->
+    #       x
+    #   end
+
+    cred_so_far |> Map.put("proof", proof) |> Map.put("id", proof["signature"])
+  end
+
+  @doc """
+  Just present a credential map in form of a verifiable presentation without checking that it's not amended.
+
+  To make stateful presentation, use this server's API "transact_present".
+  """
+  @spec present_credential_map(
+          Crypto.keypair(),
+          map(),
+          list()
+        ) :: Result.t()
+  def present_credential_map(%{public: pk} = kp, %{} = credential_map, opts \\ []) do
+    Result.new(fn ->
+      # p! = &DynHacks.put_value/3
+      p = &DynHacks.put_new_value(&1, &2, &3)
+      o = &Keyword.get(opts, &1)
+      oget = &Keyword.get(opts, &1 |> String.to_atom())
+
+      tau_oget = fn x ->
+        time_getter(x, oget)
+      end
+
+      tau_oput! = &DynHacks.put_value(&1, &2, tau_oget.(&2))
+
+      issuer_str = pk |> B.safe!() |> Map.get(:encoded)
+
+      presentation_claim =
+        %{
+          "type" => "presentation",
+          "verifiableCredential" => credential_map,
+          "issuer" => issuer_str
+        }
+        |> p.("holder", o.(:holder))
+        |> p.("credentialSubject", o.(:credentialSubject))
+        |> p.("amendingKeys", o.(:amendingKeys))
+        |> tau_oput!.("issuanceDate")
+
+      res = Crypto.sign_map!(kp, presentation_claim, opts)
+      res |> Map.put("id", res["proof"]["signature"])
+    end)
+  end
+
+  @doc """
+  Just amend a credential map without checking that it's not amended.
+
+  To make stateful amendment, use this server's API "transact_amend".
+  """
+  @spec amend_credential_map(
+          Crypto.keypair(),
+          map(),
+          any(),
+          list()
+        ) :: Result.t()
+  def amend_credential_map(
+        %{public: pk} = kp,
+        %{} = payload_map,
+        %{} = credential_map,
+        opts \\ []
+      ) do
+    Result.new(fn ->
+      issuer = pk |> B.safe!()
+
+      {["issuer", ^issuer, "can amend credential"], true} =
+        {["issuer", issuer, "can amend credential"], issuer in credential_map["amendingKeys"]}
+
+      opts =
+        if :amendingKeys in opts do
+          opts
+        else
+          opts |> Keyword.put(:amendingKeys, credential_map["amendingKeys"])
+        end
+
+      mk_credential!(
+        kp,
+        payload_map,
+        Keyword.merge([type: "amendment", amends: credential_map["id"]], opts)
+      )
+    end)
+  end
+
+  @spec content(map) :: map
+  def content(cred) do
+    cred["credentialSubject"]
+  end
+
+  @spec sig(map) :: B.Urlsafe.t()
+  def sig(cred) do
+    cred["proof"]["signature"] |> B.mk_url!()
+  end
+
+  @spec pk(map) :: B.Urlsafe.t()
+  def pk(cred) do
+    cred["proof"]["verificationMethod"] |> B.mk_url!()
+  end
+
+  @spec present_credential_map!(
+          Crypto.keypair_opt(),
+          map(),
+          list()
+        ) :: map
+  def present_credential_map!(kp, credential_map, opts \\ []) do
+    present_credential_map(kp, credential_map, opts) |> Result.from_ok()
+  end
+
+  @spec hash_map!(Crypto.canonicalisable_value()) :: String.t()
+  def hash_map!(cred) do
+    Crypto.canonicalise_term!(cred) |> Jason.encode!() |> Crypto.bland_hash()
+  end
+
+  @spec hash_map(Crypto.canonicalisable_value()) :: Result.t()
+  def hash_map(cred) do
+    Result.new(fn ->
+      hash_map!(cred)
+    end)
+  end
+
+  #### SERVER API, IT'S VERY BORING ############################################################
+
+  @spec transact_cred(Crypto.keypair_opt(), map(), keyword()) ::
+          {:reply, map(), list()}
+  def transact_cred(kp, payload_map, opts \\ []) do
+    GenServer.call(__MODULE__, {:mk_credential, kp, payload_map, opts})
+  end
+
+  @spec transact_present(Crypto.keypair(), map(), keyword()) ::
+          {:reply, map(), list()}
+  def transact_present(kp, credential_map, opts \\ []) do
+    GenServer.call(__MODULE__, {:present_credential, kp, credential_map, opts})
+  end
+
+  @spec transact_amend(Crypto.keypair(), map(), map(), keyword()) ::
+          {:reply, map(), list()}
+  def transact_amend(kp, payload_map, credential_map, opts \\ []) do
+    GenServer.call(__MODULE__, {:amend_credential, kp, payload_map, credential_map, opts})
+  end
+
+  @spec all(B.Urlsafe.t()) :: nil | list(map())
+  def all(x), do: get(x, mode: :all)
+  @spec all64(String.t()) :: nil | list(map())
+  def all64(x), do: get64(x, mode: :all)
+
+  @spec tip(B.Urlsafe.t()) :: nil | map()
+  def tip(x), do: get(x, mode: :just_the_tip)
+  @spec tip64(String.t()) :: nil | map()
+  def tip64(x), do: get64(x, mode: :just_the_tip)
+
+  @spec get(B.Urlsafe.t(), list()) :: nil | map() | list(map())
+  def get(%B.Urlsafe{encoded: xenc}, opts \\ [mode: :get]), do: get64(xenc, opts)
+
+  @spec get64(String.t(), list()) :: nil | map() | list(map())
+  def get64(x, opts \\ [mode: :get]), do: GenServer.call(__MODULE__, {:get, x, opts[:mode]})
+
+  #### SEVER BACKEND ############################################################################
+
+  @spec handle_call(tuple, {pid, any()}, state()) :: {:reply, any(), state()}
+  ## mk_credential <~ transact_cred #############################################################
+  def handle_call(
+        {mk_or_present_cred, kp, payload_map, opts},
+        _from,
+        %__MODULE__{known_payloads: ps, credentials: cs, amendments: ams} = state
+      )
+      when mk_or_present_cred == :mk_credential or mk_or_present_cred == :present_credential do
+    fetch_cred_maybe = fn ->
+      payload_hash = hash_map!(payload_map)
+
+      existing = Map.get(ps, payload_hash)
+
+      res = (is_nil(existing) && new_cred(mk_or_present_cred, kp, payload_map, opts)) || existing
+
+      state1 = %__MODULE__{
+        credentials: Map.put_new(cs, res["id"], res),
+        amendments: ams,
+        known_payloads: Map.put_new(ps, payload_hash, res["id"])
+      }
+
+      {res, state1}
+    end
+
+    case Result.new(fn ->
+           (is_nil(opts[:persist]) &&
+              {new_cred(mk_or_present_cred, kp, payload_map, opts), state}) ||
+             fetch_cred_maybe.()
+         end) do
+      %Result.Ok{ok: {cred, state1}} -> {:reply, %Result.Ok{ok: cred}, state1}
+      %Result.Err{} = e -> {:reply, e, state}
+    end
+  end
+
+  ## :amend_credential <~ transact_amend(...) ###################################################
+  def handle_call(
+        {:amend_credential, kp, payload_map, credential_map, opts},
+        _from,
+        %__MODULE__{known_payloads: ps, credentials: cs, amendments: ams} = state
+      ) do
+    prev_id = credential_map["id"]
+
+    register_amended = fn new_c, old_c ->
+      %__MODULE__{
+        known_payloads: Map.delete(ps, hash_map!(old_c |> get_payload())),
+        amendments: Map.put(ams, prev_id, new_c["id"]),
+        credentials: Map.put(cs, new_c["id"], new_c)
+      }
+    end
+
+    case get_credential_chain(prev_id, cs, ams) do
+      [tip | _] ->
+        res = amend_credential_map(kp, payload_map, tip, opts)
+
+        (Result.is_ok?(res) && {:reply, res, register_amended.(res[:ok], tip)}) ||
+          {:reply, res, state}
+
+      _ ->
+        {:reply,
+         Result.new(fn ->
+           %{"credential that has to be amended found" => false} = %{
+             "credential that has to be amended found" => prev_id
+           }
+         end)}
+    end
+  end
+
+  ## :get <~ get(...) ###########################################################################
+  def handle_call({:get, id, mode}, _from, %__MODULE__{credentials: cs} = state)
+      when mode == :get or mode == nil do
+    {:reply, Map.get(cs, id), state}
+  end
+
+  def handle_call({:get, id, mode}, _from, %__MODULE__{credentials: cs, amendments: ams})
+      when mode == :just_the_tip or mode == :all do
+    # Cache this?
+    case get_credential_chain(id, cs, ams) do
+      [res | _] = xs -> (mode == :all && xs) || res
+      _otherwise -> nil
+    end
+  end
+
+  @spec handle_cast(tuple(), map()) :: {:noreply, map()}
+  def handle_cast({:persist, cred}, state) do
+    {:noreply,
+     Map.put_new(
+       state,
+       %{
+         "verifiableCredential" => cred["verifiableCredential"],
+         "credentialSubject" => cred["credentialSubject"]
+       },
+       cred
+     )}
+  end
+
+  #### PRIVATE FUNCTIONS ########################################################################
+
+  defp new_cred(mk_or_present_cred, kp, payload_map, opts) do
+    case mk_or_present_cred do
+      :mk_credential ->
+        mk_credential!(kp, payload_map, opts)
+
+      :present_credential ->
+        present_credential_map!(kp, payload_map, opts)
+    end
+  end
+
+  defp get_credential_chain(id, cs, ams, acc \\ nil) do
+    if is_nil(acc) do
+      res = Map.get(cs, id)
+
+      if is_nil(res) do
+        nil
+      else
+        get_credential_chain(id, cs, ams, [res])
+      end
+    end
+
+    rid = Map.get(ams, id)
+
+    if is_nil(rid) do
+      acc
+    else
+      res = Map.get(cs, rid)
+      get_credential_chain(rid, cs, ams, [res | acc])
+    end
+  end
+
+  defp get_payload(c) do
+    c["credentialSubject"]
+  end
+
+  defp time_getter(x, oget) do
+    tau_maybe = oget.(x)
+
+    case tau_maybe do
+      x = %{} -> DateTime.to_iso8601(x)
+      otherwise -> otherwise
+    end
   end
 
   defp with_opts_get_timestamp_str(opts) do
@@ -202,28 +411,21 @@ defmodule DoAuth.Credential do
     end
   end
 
-  defp mk_signature_with_opts(kp, cred_so_far, opts) do
-    if Keyword.has_key?(opts, :signature) do
-      opts[:signature]
-    else
-      signed =
-        cred_so_far
-        |> Crypto.canonicalise_term!()
-        |> Crypto.canonical_sign!(kp)
-
-      signed
-      |> Map.get(:signature)
-      |> Binary.un()
-    end
+  defp mk_proof(kp, cred_so_far, opts) do
+    (Keyword.has_key?(opts, :signature) &&
+       Crypto.sig64_to_proof_map(kp[:public], opts[:signature], opts[:timestamp])) ||
+      Crypto.sign_map!(kp, cred_so_far, opts) |> Map.get("proof")
   end
 
-  defp proof_from_raw_sig(sig_raw, issuer, tau0, _opts) do
-    %{
-      "created" => tau0,
-      "verificationMethod" => issuer,
-      "type" => "Libsodium2021",
-      "proofPurpose" => "assertionMethod",
-      "signature" => sig_raw |> B.raw_to_urlsafe!() |> Map.get(:encoded)
-    }
+  #### BORING GEN_SERVER ENDPOINTS ###########################################################
+
+  @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
+  def start_link(init_args) do
+    GenServer.start_link(__MODULE__, [init_args], name: __MODULE__)
+  end
+
+  @spec init(any) :: {:ok, map()}
+  def init(_args) do
+    {:ok, %__MODULE__{}}
   end
 end

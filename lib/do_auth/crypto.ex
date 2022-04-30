@@ -620,7 +620,7 @@ defmodule DoAuth.Crypto do
   See #26!
   """
   @spec sig64_to_proof_map(String.t(), String.t(), DateTime.t() | nil) :: map()
-  def sig64_to_proof_map(<<issuer::binary>>, <<sig_raw::binary>>, timestamp \\ nil) do
+  def sig64_to_proof_map(<<issuer::binary>>, <<sig64::binary>>, timestamp \\ nil) do
     timestamp =
       if timestamp |> is_nil do
         Tau.now() |> DateTime.to_string()
@@ -630,8 +630,10 @@ defmodule DoAuth.Crypto do
 
     %{
       "verificationMethod" => issuer,
-      "signature" => sig_raw,
-      "timestamp" => timestamp
+      "signature" => sig64,
+      "created" => timestamp,
+      "type" => "Libsodium2021",
+      "proofPurpose" => "assertionMethod"
     }
   end
 end

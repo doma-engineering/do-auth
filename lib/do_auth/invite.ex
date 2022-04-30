@@ -91,7 +91,7 @@ defmodule DoAuth.Invite do
 
       r_m(
         Credential.present_credential_map!(Crypto.binary_server_keypair(), invite,
-          credential_subject: %{"generatedAt" => Tau.now() |> Crypto.canonicalise_term!()}
+          credentialSubject: %{"generatedAt" => Tau.now() |> Crypto.canonicalise_term!()}
         ),
         &register_fulfillment_async(invite, &1)
       )
