@@ -47,7 +47,7 @@ defmodule DoAuth.TestFixtures do
               35, 38, 126, 239, 6, 121, 177, 246, 42, 233, 181, 98, 193, 100, 126, 8, 206, 121,
               105, 146, 12, 220, 59, 116, 84, 7, 188>>
         }
-        |> map(&Binary.new!/1)
+        |> Witchcraft.Functor.map(&Binary.new!/1)
       end
 
       def signing_key_fixture(n) do
@@ -66,7 +66,7 @@ defmodule DoAuth.TestFixtures do
               137, 39, 40, 96, 191, 83, 23, 16, 117, 237, 48, 216, 144, 130, 252, 0, 227, 242,
               122, 201, 103, 99, 10, 223, 134, 134, 84, 147>>
         }
-        |> map(&Binary.new!/1)
+        |> Witchcraft.Functor.map(&Binary.new!/1)
       end
     end
   end

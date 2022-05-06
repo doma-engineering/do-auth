@@ -63,18 +63,36 @@ defmodule DoAuth.Invite do
     ~N[2023-01-23 20:22:01] |> DateTime.from_naive!("Etc/UTC")
   end
 
-  @spec mk_invites(B.Urlsafe.t(), pos_integer()) :: map()
-  def mk_invites(pk, capacity \\ @default_invites) do
+  @spec mk_invites(B.Urlsafe.t(), pos_integer(), keyword()) :: map()
+  def mk_invites(pk, capacity \\ @default_invites, opts \\ []) do
     Credential.mk_credential!(
       Crypto.binary_server_keypair(),
       %{
         "kind" => "invite",
         "holder" => pk.encoded,
-        "capacity" => capacity,
-        "paymentEnrollmentReminder" => remind_to_pay_from() |> DateTime.to_iso8601()
-      },
-      validUntil: unpaid_users_allowed_until()
+        "capacity" => capacity
+      }
+      |> Map.merge(remind_maybe(opts)),
+      timed_maybe(opts)
     )
+  end
+
+  defp timed_maybe(opts) do
+    if opts[:premium] do
+      [validUntil: unpaid_users_allowed_until()]
+    else
+      []
+    end
+  end
+
+  defp remind_maybe(opts) do
+    if opts[:premium] do
+      %{
+        "paymentEnrollmentReminder" => remind_to_pay_from() |> DateTime.to_iso8601()
+      }
+    else
+      %{}
+    end
   end
 
   @spec lookup(B.Urlsafe.t()) :: map | nil
@@ -292,6 +310,7 @@ defmodule DoAuth.Invite do
         _from,
         %{"views" => %{"root" => root}, "invites" => invites} = state
       ) do
+    # Proverb: there are no exclamation marks in gen_server handlers
     {:reply, Map.get(invites, root), state}
   end
 

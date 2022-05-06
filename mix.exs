@@ -11,7 +11,8 @@ defmodule DoAuth.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      package: package()
+      package: package(),
+      propcheck: [counter_examples: "counter_examples"]
     ]
   end
 
@@ -35,6 +36,7 @@ defmodule DoAuth.MixProject do
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
+      {:propcheck, "~> 1.4.1", only: [:test, :dev]},
       {:jason, "~> 1.3"},
       {:enacl, "~> 1.2.1"},
       {:dyn_hacks, "~> 0.1.0"},
