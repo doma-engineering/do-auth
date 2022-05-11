@@ -15,6 +15,7 @@ defmodule DoAuth.Invite do
   import DynHacks
 
   @default_invites 2
+  @max_persists 10
 
   @spec start_link(any) :: :ignore | {:error, any} | {:ok, pid}
   def start_link(init_args) do
@@ -46,9 +47,9 @@ defmodule DoAuth.Invite do
           some_state
       end
 
-    Logger.info(
-      "Invite server is starting with the following state: #{inspect(state0, pretty: true)}"
-    )
+    # Logger.info(
+    #   "Invite server is starting with the following state: #{inspect(state0, pretty: true)}"
+    # )
 
     {:ok, state0}
   end
@@ -156,45 +157,46 @@ defmodule DoAuth.Invite do
 
   @spec fulfill(B.Urlsafe.t(), map) :: Result.t()
   def fulfill(pk, invite_presentation_map) do
-    Result.new(fn ->
-      true = is_invite_registered(invite_presentation_map)
-      true = is_presenter_the_holder(invite_presentation_map)
-      true = is_public_key_unregistered(pk)
-      true = is_presentation_vacant(invite_presentation_map)
-      true = Crypto.verify_map(invite_presentation_map) |> Result.is_ok?()
-      credential_map = invite_presentation_map["verifiableCredential"]
-      true = is_invite_vacant(credential_map)
-      # TODO: test that non-conemporary invites get rejected
-      true = is_contemporary(credential_map)
-      true = Crypto.verify_map(credential_map) |> Result.is_ok?()
+    GenServer.call(__MODULE__, {:mailbox, pk.encoded})
 
-      r_m(
-        Credential.mk_credential!(Crypto.binary_server_keypair(), %{
-          "invite" => sig(credential_map),
-          "presentation" => sig(invite_presentation_map),
-          "holder" => pk.encoded,
-          "kind" => "fulfill"
-        }),
+    imp(
+      Result.new(fn ->
+        true =
+          is_public_key_unregistered(pk) ||
+            GenServer.call(__MODULE__, {:did_i_reserve, pk.encoded})
 
-        # So we get fulfillment, which fulfills both invite and its presentation.
-        # Fulfilling presentation is needed to prevent invite resharing.
-        #
-        # Let's capture it.
-        fn x ->
-          register_fulfillment_async(credential_map, x)
-          register_fulfillment_async(invite_presentation_map, x)
-          register_public_key(x)
-        end
-      )
+        true = is_invite_registered(invite_presentation_map)
 
-      # We've used async because most of the stuff is synchronous and isn't
-      # spammable, so this async just takes out a little bit of latency from the
-      # system and, worst case, would result in maybe an odd racy invite being
-      # fulfilled that wouldn't otherwise be fulfilled. Of course, if there's an
-      # error in stats update, we'll crash the server, but not request
-      # handling... It's an edge case to consider, but it's a disasterous
-      # situation for the whole invite subsystem.
-    end)
+        true = is_presenter_the_holder(invite_presentation_map)
+        true = is_presentation_vacant(invite_presentation_map)
+        true = Crypto.verify_map(invite_presentation_map) |> Result.is_ok?()
+        credential_map = invite_presentation_map["verifiableCredential"]
+        true = is_invite_vacant(credential_map)
+        # TODO: test that non-conemporary invites get rejected
+        true = is_contemporary(credential_map)
+        true = Crypto.verify_map(credential_map) |> Result.is_ok?()
+
+        imp(
+          Credential.mk_credential!(Crypto.binary_server_keypair(), %{
+            "invite" => sig(credential_map),
+            "presentation" => sig(invite_presentation_map),
+            "holder" => pk.encoded,
+            "kind" => "fulfill"
+          }),
+
+          # So we get fulfillment, which fulfills both invite and its presentation.
+          # Fulfilling presentation is needed to prevent invite resharing.
+          #
+          # Let's capture it.
+          fn x ->
+            register_fulfillment_sync(credential_map, x)
+            register_fulfillment_sync(invite_presentation_map, x)
+            register_public_key(x)
+          end
+        )
+      end),
+      fn y -> Result.is_ok?(y) && GenServer.call(__MODULE__, {:drop, pk.encoded}) end
+    )
   end
 
   defp register_public_key(fulfillment_cred) do
@@ -221,6 +223,10 @@ defmodule DoAuth.Invite do
 
   defp register_fulfillment_async(parent, child) do
     GenServer.cast(__MODULE__, {:register_fulfillment, sig(parent), child})
+  end
+
+  defp register_fulfillment_sync(parent, child) do
+    GenServer.call(__MODULE__, {:register_fulfillment, sig(parent), child})
   end
 
   # We use signatures as credential IDs
@@ -293,6 +299,30 @@ defmodule DoAuth.Invite do
     {:reply, Map.get(invites, Map.get(pkindex, pk64)), state}
   end
 
+  def handle_call({:mailbox, pk64}, {pid, _tag}, state) do
+    IO.puts("LOCKING #{inspect(pk64)} FROM #{inspect(pid)}")
+
+    if is_nil(Process.get({:mailbox, pk64})) do
+      a = Process.put({:mailbox, pk64}, pid)
+
+      if !is_nil(a) do
+        Process.put({:mailbox, pk64}, a)
+      end
+    end
+
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:did_i_reserve, pk64}, {pid, _tag}, state) do
+    {:reply, pid == Process.get({:mailbox, pk64}), state}
+  end
+
+  def handle_call({:drop, pk64}, _from, state) do
+    IO.puts("UNLCKNG #{inspect(pk64)} <<<< #{inspect(Process.get({:mailbox, pk64}))}")
+    Process.delete({:mailbox, pk64})
+    {:reply, :ok, state}
+  end
+
   def handle_call({:get, sig}, _from, %{"invites" => invites} = state) do
     {:reply, Map.get(invites, sig), state}
   end
@@ -319,13 +349,29 @@ defmodule DoAuth.Invite do
   end
 
   def handle_cast(:persist, state) do
-    Task.start(fn -> Persist.save_state(state, __MODULE__) end)
+    if Process.put(:persists, Process.get(:persists, 0) + 1) < @max_persists do
+      Task.start(fn ->
+        Persist.save_state(state, __MODULE__)
+        GenServer.cast(__MODULE__, :persist_done)
+      end)
+    end
+
+    {:noreply, state}
+  end
+
+  def handle_cast(:persist_done, state) do
+    Process.put(:persists, Process.get(:persists, 0) - 1)
     {:noreply, state}
   end
 
   defp register_public_key_state(pk, invite_sig, state) do
     views = Map.get(state, "views")
     pks = Map.get(views, "public_key")
+
+    if !is_nil(Map.get(pks, pk)) do
+      Logger.warn("Public key was already registered #{pk}.")
+    end
+
     %{state | "views" => %{views | "public_key" => Map.put_new(pks, pk, invite_sig)}}
   end
 

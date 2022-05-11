@@ -42,3 +42,5 @@ npm-debug.log
 
 # Ignore persist DB
 db/
+
+counter_examples
