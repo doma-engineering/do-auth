@@ -14,6 +14,8 @@ defmodule DoAuth.Invite do
 
   import DynHacks
 
+  import ExUnit.Assertions
+
   @default_invites 2
   @max_persists 10
 
@@ -157,46 +159,7 @@ defmodule DoAuth.Invite do
 
   @spec fulfill(B.Urlsafe.t(), map) :: Result.t()
   def fulfill(pk, invite_presentation_map) do
-    GenServer.call(__MODULE__, {:mailbox, pk.encoded})
-
-    imp(
-      Result.new(fn ->
-        true =
-          is_public_key_unregistered(pk) ||
-            GenServer.call(__MODULE__, {:did_i_reserve, pk.encoded})
-
-        true = is_invite_registered(invite_presentation_map)
-
-        true = is_presenter_the_holder(invite_presentation_map)
-        true = is_presentation_vacant(invite_presentation_map)
-        true = Crypto.verify_map(invite_presentation_map) |> Result.is_ok?()
-        credential_map = invite_presentation_map["verifiableCredential"]
-        true = is_invite_vacant(credential_map)
-        # TODO: test that non-conemporary invites get rejected
-        true = is_contemporary(credential_map)
-        true = Crypto.verify_map(credential_map) |> Result.is_ok?()
-
-        imp(
-          Credential.mk_credential!(Crypto.binary_server_keypair(), %{
-            "invite" => sig(credential_map),
-            "presentation" => sig(invite_presentation_map),
-            "holder" => pk.encoded,
-            "kind" => "fulfill"
-          }),
-
-          # So we get fulfillment, which fulfills both invite and its presentation.
-          # Fulfilling presentation is needed to prevent invite resharing.
-          #
-          # Let's capture it.
-          fn x ->
-            register_fulfillment_sync(credential_map, x)
-            register_fulfillment_sync(invite_presentation_map, x)
-            register_public_key(x)
-          end
-        )
-      end),
-      fn y -> Result.is_ok?(y) && GenServer.call(__MODULE__, {:drop, pk.encoded}) end
-    )
+    GenServer.call(__MODULE__, {:fulfill, pk, invite_presentation_map})
   end
 
   defp register_public_key(fulfillment_cred) do
@@ -204,6 +167,12 @@ defmodule DoAuth.Invite do
     fulfillment_id = sig(fulfillment_cred)
     GenServer.call(__MODULE__, {:register_public_key, pk, fulfillment_id})
     GenServer.cast(__MODULE__, :persist)
+  end
+
+  defp register_public_key1(fulfillment_cred, state) do
+    pk = fulfillment_cred["credentialSubject"]["holder"]
+    fulfillment_id = sig(fulfillment_cred)
+    register_public_key_state(pk, fulfillment_id, state)
   end
 
   @spec is_public_key_unregistered(B.Urlsafe.t()) :: boolean()
@@ -225,30 +194,25 @@ defmodule DoAuth.Invite do
     GenServer.cast(__MODULE__, {:register_fulfillment, sig(parent), child})
   end
 
-  defp register_fulfillment_sync(parent, child) do
-    GenServer.call(__MODULE__, {:register_fulfillment, sig(parent), child})
-  end
-
   # We use signatures as credential IDs
   defp sig(cred) do
     cred["proof"]["signature"]
-  end
-
-  defp is_invite_registered(invite) do
-    get(invite) != nil
   end
 
   defp is_invite_vacant(invite) do
     invite["credentialSubject"]["capacity"] > get_fulfillments(invite) |> Enum.count()
   end
 
-  defp is_presenter_the_holder(invite_presentation_map) do
-    invite_presentation_map["verifiableCredential"]["credentialSubject"]["holder"] ==
-      invite_presentation_map["issuer"]
+  defp holder(pres) do
+    pres["verifiableCredential"]["credentialSubject"]["holder"]
   end
 
-  defp is_presentation_vacant(%{} = invite_presentation_map) do
-    0 == get_fulfillments(invite_presentation_map) |> Enum.count()
+  defp issuer(pres) do
+    pres["issuer"]
+  end
+
+  defp is_presenter_the_holder(invite_presentation_map) do
+    holder(invite_presentation_map) == issuer(invite_presentation_map)
   end
 
   defp get_fulfillments(%{} = invite_presentation_map) do
@@ -287,6 +251,60 @@ defmodule DoAuth.Invite do
     GenServer.call(__MODULE__, :get_root_invite)
   end
 
+  def handle_call({:fulfill, pk, invite_presentation_map}, _from, state) do
+    case Result.new(fn ->
+           assert lookup1(pk.encoded, state) |> is_nil(),
+                  "Public key #{pk.encoded} is not registered."
+
+           pres_id = sig(invite_presentation_map)
+           assert %{} = by_sig(pres_id, state), "Invite #{pres_id} is registered."
+
+           assert is_presenter_the_holder(invite_presentation_map),
+                  "Presenter of the invite is also the holder"
+
+           assert [] == fulf_by_sig(pres_id, state), "Presentation of the invite isn't used up."
+
+           assert Crypto.verify_map(invite_presentation_map) |> Result.is_ok?(),
+                  "Presentation is valid."
+
+           invite_credential_map = invite_presentation_map["verifiableCredential"]
+           cred_id = sig(invite_credential_map)
+
+           assert invite_credential_map["credentialSubject"]["capacity"] >
+                    fulf_by_sig(cred_id, state) |> Enum.count(),
+                  "The invite itself has vacant spots."
+
+           assert is_contemporary(invite_credential_map), "The invite is currently valid."
+
+           assert Crypto.verify_map(invite_credential_map) |> Result.is_ok?(),
+                  "The invite is cryptographically sound."
+
+           res =
+             Credential.mk_credential!(Crypto.binary_server_keypair(), %{
+               "invite" => cred_id,
+               "presentation" => pres_id,
+               "holder" => pk.encoded,
+               "kind" => "fulfill"
+             })
+
+           # So we get fulfillment, which fulfills both invite and its presentation.
+           # Fulfilling presentation is needed to prevent invite resharing.
+           #
+           # Let's capture it.
+
+           #  state1 = register_fulfillment_state(invite_credential_map, res, state)
+           #  state2 = register_fulfillment_state(invite_presentation_map, res, state1)
+           state1 = register_fulfillment_state(cred_id, res, state)
+           state2 = register_fulfillment_state(pres_id, res, state1)
+           state3 = register_public_key1(res, state2)
+
+           {:reply, res, state3}
+         end) do
+      %Result.Ok{ok: {_, res, new_state}} -> {:reply, %Result.Ok{ok: res}, new_state}
+      %Result.Err{} = err -> {:reply, err, state}
+    end
+  end
+
   def handle_call({:get_fulfillments, id}, _from, %{"fulfillments" => fulfillments} = state) do
     {:reply, Map.get(fulfillments, id, []), state}
   end
@@ -294,9 +312,9 @@ defmodule DoAuth.Invite do
   def handle_call(
         {:lookup, pk64},
         _from,
-        %{"invites" => invites, "views" => %{"public_key" => pkindex}} = state
+        state
       ) do
-    {:reply, Map.get(invites, Map.get(pkindex, pk64)), state}
+    {:reply, lookup1(pk64, state), state}
   end
 
   def handle_call({:mailbox, pk64}, {pid, _tag}, state) do
@@ -310,16 +328,6 @@ defmodule DoAuth.Invite do
       end
     end
 
-    {:reply, :ok, state}
-  end
-
-  def handle_call({:did_i_reserve, pk64}, {pid, _tag}, state) do
-    {:reply, pid == Process.get({:mailbox, pk64}), state}
-  end
-
-  def handle_call({:drop, pk64}, _from, state) do
-    IO.puts("UNLCKNG #{inspect(pk64)} <<<< #{inspect(Process.get({:mailbox, pk64}))}")
-    Process.delete({:mailbox, pk64})
     {:reply, :ok, state}
   end
 
@@ -342,6 +350,12 @@ defmodule DoAuth.Invite do
       ) do
     # Proverb: there are no exclamation marks in gen_server handlers
     {:reply, Map.get(invites, root), state}
+  end
+
+  def handle_call({:run_lambda, f}, _from, _state) do
+    y = f.()
+    state1 = :sys.get_state(__MODULE__)
+    {:reply, y, state1}
   end
 
   def handle_cast({:register_fulfillment, parent_sig, child}, state) do
@@ -387,5 +401,20 @@ defmodule DoAuth.Invite do
       | "fulfillments" => fulfillments |> Map.put(parent_sig, [sig(child) | fs]),
         "invites" => invites |> Map.put(sig(child), child)
     }
+  end
+
+  defp lookup1(
+         pk64,
+         %{"invites" => invites, "views" => %{"public_key" => pkindex}}
+       ) do
+    Map.get(invites, Map.get(pkindex, pk64))
+  end
+
+  defp by_sig(sig, %{"invites" => invites}) do
+    Map.get(invites, sig)
+  end
+
+  defp fulf_by_sig(sig, %{"fulfillments" => fulfillments}) do
+    Map.get(fulfillments, sig, [])
   end
 end

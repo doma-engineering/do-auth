@@ -105,7 +105,11 @@ defmodule DoAuth.Regression12Test do
 
   PropCheck.App.start(:f, :m)
 
-  property "Invite server works with sequential fulfillments", [{:numtests, 21}, :noshrink] do
+  property "Invite server works with sequential fulfillments", [
+    {:numtests, 100},
+    :noshrink,
+    :verbose
+  ] do
     File.rm_rf!(Path.join(["db", "nonode@nohost"]))
     PropCheck.App.start(:f, :m)
     DoAuth.Otp.Application.start()
