@@ -12,7 +12,13 @@ defmodule DoAuth.MixProject do
       deps: deps(),
       aliases: aliases(),
       package: package(),
-      propcheck: [counter_examples: "counter_examples"]
+      propcheck: [counter_examples: "counter_examples"],
+      # dev
+      dialyzer: [
+        ignore_warnings: ".dialyzer_ignore.exs",
+        list_unused_filters: true,
+        remove_defaults: [:unknown]
+      ]
     ]
   end
 
