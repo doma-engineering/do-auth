@@ -14,7 +14,7 @@ defmodule DoAuth.Invite do
 
   import DynHacks
 
-  import ExUnit.Assertions
+  import Uptight.Assertions
 
   @default_invites 2
   @max_persists 10
