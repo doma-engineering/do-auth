@@ -52,7 +52,8 @@ defmodule DoAuth.MixProject do
       {:doma_witchcraft, "~> 1.0.4-doma"},
       {:doma_algae, "~> 1.3.1-doma"},
       {:doma_quark, "~> 2.3.2-doma2"},
-      {:plug_cowboy, "~> 2.0"}
+      {:plug_cowboy, "~> 2.0"},
+      {:bamboo_smtp, "~> 4.1"}
     ]
   end
 

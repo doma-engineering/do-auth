@@ -15,6 +15,8 @@ config :do_auth, DoAuth.Mailer,
 
 If you ever want to send E-Mail on behalf of DoAuth from your app, you can now use `DoAuth.Mailer.deliver_now!(your_email)`.
 
+In principle, it's possible to increase security by having an operator enter a PIN to decrypt a secret encrypted at rest.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
@@ -31,4 +33,3 @@ end
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/do_auth](https://hexdocs.pm/do_auth).
-
