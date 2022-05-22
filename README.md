@@ -2,6 +2,19 @@
 
 It's a really cool system. Use it for authentication, because that's how authentication should be. No IDPs, no bullshit. Your users own their identity.
 
+## Mailer
+
+Set up [smtp](https://github.com/fewlinesco/bamboo_smtp#installation). We use `:do_auth` app here, not `:doma` meta-app, so we configure against it. Your strategy will be:
+
+```elixir
+config :do_auth, DoAuth.Mailer,
+  adapter: Bamboo.SMTPAdapter,
+  server: "smtp.your.mailserver",
+  # ...
+```
+
+If you ever want to send E-Mail on behalf of DoAuth from your app, you can now use `DoAuth.Mailer.deliver_now!(your_email)`.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
