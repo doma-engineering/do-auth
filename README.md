@@ -1,6 +1,6 @@
 # DoAuth
 
-**TODO: Add description**
+It's a really cool system. Use it for authentication, because that's how authentication should be. No IDPs, no bullshit. Your users own their identity.
 
 ## Installation
 

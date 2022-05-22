@@ -4,10 +4,10 @@ defmodule DoAuth.MixProject do
   def project do
     [
       app: :do_auth,
-      version: "0.5.1-pre",
+      version: "0.5.2-pre",
       description:
         "Fast, lean and reliable authentication server based on verifiable credentials standard",
-      elixir: "~> 1.12",
+      elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
@@ -46,8 +46,8 @@ defmodule DoAuth.MixProject do
       {:jason, "~> 1.3"},
       {:enacl, "~> 1.2.1"},
       {:dyn_hacks, "~> 0.1.0"},
-      {:uptight, "~> 0.2.0-pre"},
-      {:persist, "~> 0.1.0-pre2"},
+      {:uptight, "~> 0.2.4-rc"},
+      {:persist, "~> 0.1.2-rc"},
       {:doma, "~> 1.0.0"},
       {:doma_witchcraft, "~> 1.0.4-doma"},
       {:doma_algae, "~> 1.3.1-doma"},
