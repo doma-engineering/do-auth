@@ -8,8 +8,8 @@ defmodule DoAuth.User do
   alias Uptight.Base.Urlsafe, as: U
 
   defdata do
-    email :: T.t()
-    nickname :: T.t()
-    cred :: U.t()
+    email :: T.t() | nil \\ nil
+    nickname :: T.t() | nil \\ nil
+    cred :: U.t() | nil \\ nil
   end
 end
