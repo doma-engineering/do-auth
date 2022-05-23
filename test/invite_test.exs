@@ -5,7 +5,7 @@ defmodule DoAuth.InviteTest do
   Tests of invite logic and that authed endpoints work
   """
   use Plug.Test
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   use DoAuth.TestFixtures, [:crypto]
   alias DoAuth.{Crypto, Invite}

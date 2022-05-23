@@ -1,4 +1,4 @@
-defmodule DoAuth.Regression12Test do
+defmodule DoAuth.AmendmentsTest do
   @moduledoc """
   Here we write a model for testing regression from #12.
   We arguably check the invite logic here in a way that's better than one in invite_test.exs, but we're leaving the latter intact just in case.
@@ -15,89 +15,77 @@ defmodule DoAuth.Regression12Test do
   use PropCheck.StateM.ModelDSL
 
   use DoAuth.TestFixtures, [:crypto]
+  import DynHacks
+
   alias DoAuth.{Invite, Crypto}
   alias Uptight.Result
 
-  import DynHacks
+  alias PropCheck.BasicTypes, as: BT
+  alias DoAuth.Credential, as: Cred
 
   defmodule State do
     @moduledoc """
     State for the statem test model.
-    We track fulfilled invites as credentials, track ids of refused ones and track all the generated ones.
+    We track a single "mutable" UTF-8 string and assert that amendments with the same key work.
+    Moving forward, we should improve this model: rotate keys, for instance, but so far we really need to move fast.
     """
-    defstruct fulfilled: [],
-              refused: [],
-              generated: []
+    # Map that tells which cred ID should resolve to which UTF-8 String
+    defstruct value: %{}
 
     @type t :: %__MODULE__{}
   end
 
-  @min_key_id 2
-  @max_key_id 20
-
   @spec initial_state() :: State.t()
   def initial_state(), do: %State{}
 
-  defcommand :fulfill do
-    # @spec impl(pos_integer()) :: Result.t()
-    def impl(n) do
+  defcommand :insert do
+    # @spec impl(utf8()) :: Result.t()
+    def impl(x) do
       # Fixture?!
-      granted = Invite.grant_root_invite() |> Result.from_ok()
-      kp1 = signing_key_fixture(n) |> Witchcraft.Functor.map(&B.safe!/1)
-      res = Invite.fulfill(kp1[:public], granted)
-      res
+      skp = Crypto.server_keypair()
+      ak = skp.public |> B.binary_to_urlsafe!() |> Map.get(:encoded)
+      Cred.transact_cred(skp, %{"gen" => x}, amendingKeys: ak) |> Result.from_ok()
     end
 
     # @spec pre(State.t(), list()) :: boolean()
-    def pre(_, [1]) do
-      false
+    def pre(_, [bs]) do
+      String.length(bs) > 15
     end
 
-    def pre(_, _) do
-      true
+    # @spec next(State.t(), list(), map()) :: State.t()
+    def next(state0, [bs], %{} = res) do
+      # IO.inspect(state0)
+      # IO.inspect(bs)
+      # IO.inspect(res)
+      # IO.inspect("*& *  * * * * * * *")
+
+      assert is_nil(Map.get(state0.value, bs)),
+             "There is no #{inspect(bs)} in #{inspect(state0)}."
+
+      id_sig = Cred.sig(res).encoded
+
+      assert id_sig == res["id"],
+             "Credentials have signature as their IDs. Namely, #{inspect(res)}."
+
+      %State{value: Map.put_new(state0.value, id_sig, bs)}
     end
 
-    defp with_result_next(state0, [n], res) do
-      fulfilled1 = (Result.is_ok?(res) && [n | state0.fulfilled]) || state0.fulfilled
-      refused1 = (Result.is_err?(res) && [n | state0.refused]) || state0.refused
-      # This can't really go into post-condition without an extra query to the
-      # invite server, so we just make sure that the invariant of always having
-      # just one fulfillment holds like this.
-      if Result.is_ok?(res) do
-        assert [n] = Enum.filter(fulfilled1, &(&1 == n)),
-               "There is only one credential generated for PK ##{n}"
-
-        assert Crypto.verify_map(res.ok),
-               "Invite server has generated a valid invite for PK ##{n}"
-
-        # This checks for regression!
-        assert is_nil(res.ok["validUntil"]), "Invite doesn't expire for PK ##{n}"
-      else
-        assert [] != Enum.filter(refused1, &(&1 == n))
-      end
-
-      %State{fulfilled: fulfilled1, refused: refused1, generated: [n | state0.generated]}
-    end
-
-    # @spec next(State.t(), list(), Result.t()) :: State.t()
-    def next(state0, [n], %Result.Ok{} = res), do: with_result_next(state0, [n], res)
-    def next(state0, [n], %Result.Err{} = res), do: with_result_next(state0, [n], res)
     def next(state0, _, _), do: state0
+
     # @spec post(State.t(), list(), Result.t()) :: boolean()
     def post(_, _, _) do
-      pks = :sys.get_state(Invite)["views"]["public_key"]
-      assert @max_key_id - @min_key_id + 1 >= Enum.count(pks)
+      # pks = :sys.get_state(Invite)["views"]["public_key"]
+      assert true
     end
-  end
-
-  def next(state0, _, _) do
-    state0
   end
 
   # Sorry for any()
   @spec command_gen(State.t()) :: any()
   def command_gen(_) do
-    frequency([{1, {:fulfill, [PropCheck.BasicTypes.integer(@min_key_id, @max_key_id)]}}])
+    frequency([
+      {1, {:insert, [BT.utf8(1024)]}}
+      # {1, {:amend, [BT.utf8(1024), BT.float(0.0, 1.0)]}}
+    ])
   end
 
   # test "granted invitations aren't premium by default" do
@@ -106,7 +94,7 @@ defmodule DoAuth.Regression12Test do
 
   PropCheck.App.start(:f, :m)
 
-  property "Invite server works with sequential fulfillments", [
+  property "adjustments update most recent payload", [
     {:numtests, 100},
     :noshrink
     # :verbose

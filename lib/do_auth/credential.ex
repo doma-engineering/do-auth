@@ -201,19 +201,19 @@ defmodule DoAuth.Credential do
   #### SERVER API, IT'S VERY BORING ############################################################
 
   @spec transact_cred(Crypto.keypair_opt(), map(), keyword()) ::
-          {:reply, map(), list()}
+          {:reply, Result.t(), list()}
   def transact_cred(kp, payload_map, opts \\ []) do
     GenServer.call(__MODULE__, {:mk_credential, kp, payload_map, opts})
   end
 
   @spec transact_present(Crypto.keypair(), map(), keyword()) ::
-          {:reply, map(), list()}
+          {:reply, Result.t(), list()}
   def transact_present(kp, credential_map, opts \\ []) do
     GenServer.call(__MODULE__, {:present_credential, kp, credential_map, opts})
   end
 
   @spec transact_amend(Crypto.keypair(), map(), map(), keyword()) ::
-          {:reply, map(), list()}
+          {:reply, Result.t(), list()}
   def transact_amend(kp, payload_map, credential_map, opts \\ []) do
     GenServer.call(__MODULE__, {:amend_credential, kp, payload_map, credential_map, opts})
   end

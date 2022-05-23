@@ -114,7 +114,7 @@ defmodule DoAuth.Invite do
         Credential.present_credential_map!(Crypto.binary_server_keypair(), invite,
           credentialSubject: %{"generatedAt" => Tau.now() |> Crypto.canonicalise_term!()}
         ),
-        &register_fulfillment_async(invite, &1)
+        &register_fulfillment(invite, &1)
       )
     end)
   end
@@ -150,11 +150,16 @@ defmodule DoAuth.Invite do
           "kind" => "fulfill"
         }),
         fn x ->
-          register_fulfillment_async(root_invite, x)
+          register_fulfillment(sig(root_invite), x)
           register_public_key(x)
         end
       )
     end)
+  end
+
+  @spec register_fulfillment(map(), map()) :: :ok
+  def register_fulfillment(invite_id, cred) do
+    GenServer.call(__MODULE__, {:register_fulfillment, invite_id, cred})
   end
 
   @spec fulfill(B.Urlsafe.t(), map) :: Result.t()
@@ -188,10 +193,6 @@ defmodule DoAuth.Invite do
   @spec get(map) :: map | nil
   def get(invite) do
     GenServer.call(__MODULE__, {:get, sig(invite)})
-  end
-
-  defp register_fulfillment_async(parent, child) do
-    GenServer.cast(__MODULE__, {:register_fulfillment, sig(parent), child})
   end
 
   # We use signatures as credential IDs
@@ -260,7 +261,7 @@ defmodule DoAuth.Invite do
            assert %{} = by_sig(pres_id, state), "Invite #{pres_id} is registered."
 
            assert is_presenter_the_holder(invite_presentation_map),
-                  "Presenter of the invite is also the holder"
+                  "Presenter of the invite is also the holder."
 
            assert [] == fulf_by_sig(pres_id, state), "Presentation of the invite isn't used up."
 
@@ -318,8 +319,6 @@ defmodule DoAuth.Invite do
   end
 
   def handle_call({:mailbox, pk64}, {pid, _tag}, state) do
-    IO.puts("LOCKING #{inspect(pk64)} FROM #{inspect(pid)}")
-
     if is_nil(Process.get({:mailbox, pk64})) do
       a = Process.put({:mailbox, pk64}, pid)
 
@@ -356,10 +355,6 @@ defmodule DoAuth.Invite do
     y = f.()
     state1 = :sys.get_state(__MODULE__)
     {:reply, y, state1}
-  end
-
-  def handle_cast({:register_fulfillment, parent_sig, child}, state) do
-    {:noreply, register_fulfillment_state(parent_sig, child, state)}
   end
 
   def handle_cast(:persist, state) do

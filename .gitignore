@@ -44,3 +44,6 @@ npm-debug.log
 db/
 
 counter_examples
+
+/.elixir_ls/
+/.vscode/

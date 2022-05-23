@@ -526,7 +526,7 @@ defmodule DoAuth.Crypto do
   @doc """
   Simple way to get the server keypair.
 
-  # TODO: audit key management practices in Phoenix and here.
+  TODO: Move to Urlsafe by default API everywhere.
   """
   @spec server_keypair :: keypair()
   def server_keypair() do

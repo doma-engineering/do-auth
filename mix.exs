@@ -24,7 +24,7 @@ defmodule DoAuth.MixProject do
 
   defp aliases do
     [
-      test: "test --no-start"
+      # test: "test --no-start"
     ]
   end
 
@@ -46,7 +46,7 @@ defmodule DoAuth.MixProject do
       {:jason, "~> 1.3"},
       {:enacl, "~> 1.2.1"},
       {:dyn_hacks, "~> 0.1.0"},
-      {:uptight, "~> 0.2.4-rc"},
+      {:uptight, "~> 0.2.6-rc"},
       {:persist, "~> 0.1.2-rc"},
       {:doma, "~> 1.0.0"},
       {:doma_witchcraft, "~> 1.0.4-doma"},
