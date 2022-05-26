@@ -29,12 +29,12 @@ defmodule DoAuth.User do
     )
   end
 
+  def start_link(_) do
+    :ignore
+  end
+
   @impl true
   def init(initxkv) do
     {:ok, new(initxkv["email"], initxkv["nickname"])}
-  end
-
-  def start_link(_) do
-    :ignore
   end
 end

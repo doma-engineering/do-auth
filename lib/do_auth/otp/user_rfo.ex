@@ -13,7 +13,11 @@ defmodule DoAuth.Otp.UserRfo do
   end
 
   @spec start_link(any) :: {:error, any} | {:ok, pid} | {:ok, pid, any}
-  def start_link(_initx) do
-    Supervisor.start_link(primary_children(), strategy: :rest_for_one, name: __MODULE__)
+  def start_link(initx) do
+    Supervisor.start_link(__MODULE__, initx, name: __MODULE__)
+  end
+
+  def init(_initx) do
+    Supervisor.init(primary_children(), strategy: :rest_for_one)
   end
 end
