@@ -1,0 +1,19 @@
+defmodule DoAuth.Otp.UserRfo do
+  @moduledoc """
+  All for one, ensuring that if UserReg crashes, UserSup crashes too, restarting, rereading stuff from persistant database and reregistering registered users with user registry.
+  """
+
+  use Supervisor, restart: :permanent
+
+  defp primary_children() do
+    [
+      DoAuth.Otp.UserReg,
+      DoAuth.Otp.UserSup
+    ]
+  end
+
+  @spec start_link(any) :: {:error, any} | {:ok, pid} | {:ok, pid, any}
+  def start_link(_initx) do
+    Supervisor.start_link(primary_children(), strategy: :rest_for_one, name: __MODULE__)
+  end
+end

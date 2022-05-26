@@ -3,10 +3,13 @@ defmodule DoAuth.Otp.Application do
   DoAuth servers entry point.
   """
 
+  alias DoAuth.Otp, as: O
+
   defp primary_children() do
     [
       DoAuth.Invite,
-      DoAuth.Credential
+      DoAuth.Credential,
+      DoAuth.Otp.UserRfo
     ]
   end
 
