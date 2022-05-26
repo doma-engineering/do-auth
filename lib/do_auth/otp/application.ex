@@ -5,8 +5,8 @@ defmodule DoAuth.Otp.Application do
 
   defp primary_children() do
     [
-      %{id: DoAuth.Invite, start: {DoAuth.Invite, :start_link, [{}]}},
-      %{id: DoAuth.Credential, start: {DoAuth.Credential, :start_link, [{}]}}
+      DoAuth.Invite,
+      DoAuth.Credential
     ]
   end
 
