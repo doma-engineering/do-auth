@@ -11,10 +11,12 @@ defmodule DoAuth.Otp.UserSup do
 
   alias Uptight.Text, as: T
 
+  @spec start_bucket(T.t(), T.t()) :: DynamicSupervisor.on_start_child()
   def start_bucket(%T{} = email, %T{} = nickname) do
     DynamicSupervisor.start_child(__MODULE__, {DoAuth.User, [email, nickname]})
   end
 
+  @spec start_link(any) :: Supervisor.on_start()
   def start_link(initx) do
     DynamicSupervisor.start_link(__MODULE__, initx, name: __MODULE__)
   end

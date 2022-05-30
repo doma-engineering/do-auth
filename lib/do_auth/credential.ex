@@ -17,6 +17,8 @@ defmodule DoAuth.Credential do
   #### PURE LIBRARY FUNCTIONS, SORTED BY IMPORTANCE ##############################################
 
   @doc """
+  Stateful version of this function: `transact_cred`.
+
   Takes a binary public key embedded into a keypair, payload map aka rich "credentialSubject" and some options, meaningful ones are:
 
       + :issuanceDate :: Date.t() as string
@@ -85,9 +87,9 @@ defmodule DoAuth.Credential do
   end
 
   @doc """
-  Just present a credential map in form of a verifiable presentation without checking that it's not amended.
+  Stateful version of this function: `transact_present`.
 
-  To make stateful presentation, use this server's API "transact_present".
+  Just present a credential map in form of a verifiable presentation without checking that it's not amended.
   """
   @spec present_credential_map(
           Crypto.keypair(),
@@ -125,9 +127,9 @@ defmodule DoAuth.Credential do
   end
 
   @doc """
-  Just amend a credential map without checking that it's not amended.
+  Stateful version of this function: `transact_amend`.
 
-  To make stateful amendment, use this server's API "transact_amend".
+  Just amend a credential map without checking that it's not amended.
   """
   @spec amend_credential_map(
           Crypto.keypair(),
@@ -198,7 +200,7 @@ defmodule DoAuth.Credential do
     end)
   end
 
-  #### SERVER API, IT'S VERY BORING ############################################################
+  #### SERVER API, IT'S VERY BORING BUT VERY IMPORTANT ###########################################
 
   @spec transact_cred(Crypto.keypair_opt(), map(), keyword()) ::
           {:reply, Result.t(), list()}

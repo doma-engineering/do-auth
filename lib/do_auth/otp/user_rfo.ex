@@ -17,6 +17,7 @@ defmodule DoAuth.Otp.UserRfo do
     Supervisor.start_link(__MODULE__, initx, name: __MODULE__)
   end
 
+  @impl true
   def init(_initx) do
     Supervisor.init(primary_children(), strategy: :rest_for_one)
   end

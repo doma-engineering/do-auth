@@ -159,6 +159,21 @@ defmodule DoAuth.Crypto do
     {mkey |> Binary.new!(), slip |> tighten_slip()}
   end
 
+  @spec randombytes_enc(pos_integer()) :: String.t()
+  def randombytes_enc(size \\ 32) do
+    randombytes(size).encoded
+  end
+
+  @spec randombytes_raw(pos_integer()) :: binary()
+  def randombytes_raw(size \\ 32) do
+    C.randombytes(size)
+  end
+
+  @spec randombytes(pos_integer()) :: Uptight.Base.Urlsafe.t()
+  def randombytes(size \\ 32) do
+    randombytes_raw(size) |> Uptight.Binary.new!() |> Uptight.Base.safe!()
+  end
+
   defp tighten_slip(%{salt: <<raw_salt::binary>>} = x) do
     %{x | salt: raw_salt |> Binary.new!()}
   end
@@ -355,6 +370,8 @@ defmodule DoAuth.Crypto do
   end
 
   @doc """
+  Keypairs are encoded with `Binary.t()`, but it will change once we move back to the total `Uptight.Base.t()` APIs everywhere!
+
   Signs a map and embeds detached signature into it.
   This function is configurable via options and has the following options:
    * :proof_field - which field carries the embedded proof. Defaults to "proof".
@@ -394,6 +411,9 @@ defmodule DoAuth.Crypto do
     end)
   end
 
+  @doc """
+  Keypairs are encoded with `Binary.t()`, but it will change once we move back to the total `Uptight.Base.t()` APIs everywhere!
+  """
   @spec sign_map!(keypair_opt(), map(), list(), list()) :: map
   def sign_map!(kp, to_prove, overrides \\ [], defopts \\ sign_map_def_opts()) do
     sign_map(kp, to_prove, overrides, defopts) |> Result.from_ok()
