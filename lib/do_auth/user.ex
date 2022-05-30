@@ -93,7 +93,8 @@ defmodule DoAuth.User do
 
   ######## GEN SERVER HANDLERS! #####################################################
 
-  @spec handle_call(:get_state, pid, __MODULE__.t()) :: {:reply, __MODULE__.t(), __MODULE__.t()}
+  @spec handle_call(:get_state, {pid, any}, __MODULE__.t()) ::
+          {:reply, __MODULE__.t(), __MODULE__.t()}
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
   end
