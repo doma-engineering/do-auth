@@ -44,6 +44,7 @@ defmodule DoAuth.MixProject do
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:propcheck, "~> 1.4.1", only: [:test, :dev], runtime: true},
       {:jason, "~> 1.3"},
+      {:hut, "~> 1.3.0", manager: :rebar3, override: true},
       {:enacl, "~> 1.2.1"},
       {:dyn_hacks, "~> 0.1.0"},
       {:uptight, "~> 0.2.6-rc"},

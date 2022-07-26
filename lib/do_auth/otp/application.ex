@@ -7,7 +7,8 @@ defmodule DoAuth.Otp.Application do
     [
       DoAuth.Invite,
       DoAuth.Credential,
-      DoAuth.Otp.UserRfo
+      DoAuth.Otp.UserRfo,
+      Plug.Cowboy.child_spec(scheme: :http, plug: DoAuth.Router, options: [port: 8080])
     ]
   end
 
