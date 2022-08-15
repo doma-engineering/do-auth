@@ -230,11 +230,11 @@ defmodule DoAuth.Credential do
   @spec tip64(String.t()) :: nil | map()
   def tip64(x), do: get64(x, mode: :just_the_tip)
 
-  @spec get(B.Urlsafe.t(), list()) :: nil | map() | list(map())
-  def get(%B.Urlsafe{encoded: xenc}, opts \\ [mode: :get]), do: get64(xenc, opts)
+  @spec get_exactly(B.Urlsafe.t(), list()) :: nil | map() | list(map())
+  def get_exactly(%B.Urlsafe{encoded: xenc}, opts \\ [mode: :get]), do: get64(xenc, opts)
 
-  @spec get64(String.t(), list()) :: nil | map() | list(map())
-  def get64(x, opts \\ [mode: :get]), do: GenServer.call(__MODULE__, {:get, x, opts[:mode]})
+  @spec get64_exactly(String.t(), list()) :: nil | map() | list(map())
+  def get64_exactly(x, opts \\ [mode: :get]), do: GenServer.call(__MODULE__, {:get, x, opts[:mode]})
 
   #### SEVER BACKEND ############################################################################
 
