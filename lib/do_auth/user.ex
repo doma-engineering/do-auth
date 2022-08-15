@@ -39,6 +39,16 @@ defmodule DoAuth.User do
     GenServer.call(pid, :get_state)
   end
 
+#  (2nd point) I'm not sure I've done correctly you wrote about corresponding user's process
+  def by_seed(email) do
+    case Result.new(fn ->
+      by_email!(email)
+    end) do
+      %Result.Err{} = err -> err
+      %Result.Ok{ok: {_, res, new_state}} -> {:reply, %Result.Ok{ok: res}, new_state}
+    end
+  end
+
   @spec start_link(list(T.t())) :: :ignore | {:error, any} | {:ok, pid}
   def start_link([%T{} = email, %T{} = nickname] = x) do
     _e = email |> T.un()
@@ -58,22 +68,30 @@ defmodule DoAuth.User do
     {:ok, new(initxkv["email"], initxkv["nickname"])}
   end
 
-  @spec reserve_identity(T.t(), T.t(), keyword(T.t())) :: Result.t()
-  def reserve_identity(%T{} = email, %T{} = nickname, opts \\ []) do
+  @spec park_identity(T.t(), T.t(), keyword(T.t())) :: Result.t()
+  def park_identity(%T{} = email, %T{} = nickname, opts \\ []) do
     case Result.new(fn ->
            assert UserSup.start_bucket(email, nickname) |> elem(0) == :ok,
                   "The user with E-mail #{email.text} is already registered."
          end) do
       %Result.Err{} = err -> err
-      ok -> on_reserve_identity(email, nickname, opts)
+      ok -> on_park_identity(email, nickname, opts)
     end
   end
 
-  defp on_reserve_identity(email, nickname, opts) do
+  defp on_park_identity(email, nickname, opts) do
     secret = make_shared_secret()
     homebase = opts[:homebase] || "localhost" |> T.new!()
     confirmation_cred = mk_confirmation_cred(secret, email.text, nickname.text, homebase.text)
     Mail.confirmation(secret, email, nickname, homebase) |> Mailer.deliver_now!()
+
+#   (1st point) I think that this way we can save parked credentials with email in our state this way
+    state1 = %__MODULE__{
+      credentials: Map.put_new(cs, email.text, confirmation_cred),
+      amendments: ams,
+      known_payloads: ps
+    }
+    Persist.save_state(state1, __MODULE__)
   end
 
   defp mk_confirmation_cred(%U{encoded: x}, email, nickname, homebase) do
