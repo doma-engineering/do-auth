@@ -1,7 +1,7 @@
 defmodule DoAuth.Otp.UserReg do
   @moduledoc """
   An agent maintaining a registry used by UserSup -> User OTP edge.
-  Probably we should rewrite this to gproc, but let's keep it like this for the time being.
+  TODO: Probably we should rewrite this to gproc, but let's keep it like this for the time being.
   """
   use Agent
 

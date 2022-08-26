@@ -7,7 +7,7 @@ defmodule DoAuth.Otp.Application do
     [
       DoAuth.Invite,
       DoAuth.Credential,
-      DoAuth.Otp.UserRfo
+      DoAuth.Otp.UserOfa
     ]
   end
 

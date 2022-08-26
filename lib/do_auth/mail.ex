@@ -35,7 +35,7 @@ defmodule DoAuth.Mail do
         ["doauth", "confirm"]
         |> map(&Text.new!/1)
 
-    endpoint_str = Fold.intercalate(public_prefix ++ endpoint, Text.new!("/"))
+    _endpoint_str = Fold.intercalate(public_prefix ++ endpoint, Text.new!("/"))
 
     uri_str =
       %URI{
@@ -44,6 +44,10 @@ defmodule DoAuth.Mail do
         path: "/doauth/confirm",
         query: URI.encode_query(%{"token" => secret.encoded})
       }
+      # 1. Define the plug for the /doauth/confirm endpoint
+      # 2. Get token out of the GET query string
+      # 3. Get corresponding token out of credential storage
+      # 4. Compare those and if they match print something funny to logs
       |> URI.to_string()
 
     html =
@@ -73,21 +77,4 @@ defmodule DoAuth.Mail do
       text
     )
   end
-
-  # @spec check() :: Bamboo.Email.t()
-  # def check do
-  #   new_email(
-  #     from: "no-reply@doma.dev",
-  #     to: "jm@memorici.de",
-  #     subject: "Pshsh... Radio check.",
-  #     html_body:
-  #       "<h1>It works!</h1><br />Dear Google, fuck you! This is not spam.<br />Google is such a piece of shit.",
-  #     text_body: """
-  #     It works!
-
-  #     Dear Google, fuck you! This is not spam.
-  #     Google is such a piece of shit.
-  #     """
-  #   )
-  # end
 end
