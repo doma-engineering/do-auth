@@ -332,14 +332,12 @@ defmodule DoAuth.Crypto do
           proof -> [proof]
         end
 
-      case Enum.reduce_while(
-             proofs,
-             false,
-             &verify_step(&1, &2, opts, verifiable_canonical, verifiable_map)
-           ) do
-        true -> {:ok, true}
-        e -> {:error, e}
-      end
+      true =
+        Enum.reduce_while(
+          proofs,
+          false,
+          &verify_step(&1, &2, opts, verifiable_canonical, verifiable_map)
+        )
     end)
   end
 

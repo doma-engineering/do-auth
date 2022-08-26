@@ -107,8 +107,9 @@ defmodule DoAuth.Invite do
   def grant_root_invite() do
     Result.new(fn ->
       invite = get_root_invite()
-      true = is_invite_vacant(invite)
-      true = Crypto.verify_map(invite) |> Result.is_ok?()
+      assert is_invite_vacant(invite), "Invite must not be already fulfilled."
+      is_valid = Crypto.verify_map(invite)
+      assert Result.is_ok?(is_valid), "Invite must be a valid credential."
 
       r_m(
         Credential.present_credential_map!(Crypto.binary_server_keypair(), invite,
@@ -213,7 +214,7 @@ defmodule DoAuth.Invite do
   end
 
   defp is_presenter_the_holder(invite_presentation_map) do
-    holder(invite_presentation_map) == issuer(invite_presentation_map)
+    holder(invite_presentation_map) == issuer(invite_presentation_map["verifiableCredential"])
   end
 
   defp get_fulfillments(%{} = invite_presentation_map) do
