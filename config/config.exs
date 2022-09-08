@@ -10,6 +10,10 @@ if File.exists?("./config/" <> secret_cfg) do
   import_config secret_cfg
 end
 
+config :do_auth, DoAuth.Web, port: 8111
+
+### Don't use the following keys in this file, the following lines are just an example for you to make your secret configs!
+
 # config :doma, :crypto, text__secret_key_base: "some very random text, yeah"
 
 # config :do_auth, DoAuth.Mailer,

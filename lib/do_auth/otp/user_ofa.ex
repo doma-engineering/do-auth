@@ -5,7 +5,7 @@ defmodule DoAuth.Otp.UserOfa do
   OTP Tree:
 
   ```
-      (user_rfo is Supervisor) -- (user_reg is Registry U Agent)
+      (user_ofa is Supervisor) -- (user_reg is Registry U Agent)
               /
       (user_sup is DynamicSupervisor)
           |    |   |

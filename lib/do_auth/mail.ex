@@ -37,13 +37,15 @@ defmodule DoAuth.Mail do
 
     _endpoint_str = Fold.intercalate(public_prefix ++ endpoint, Text.new!("/"))
 
+    # TODO: Port is missing
     uri_str =
       %URI{
         scheme: scheme.text,
         host: homebase_fqdn.text,
         path: "/doauth/confirm",
-        query: URI.encode_query(%{"token" => secret.encoded})
+        query: URI.encode_query(%{"token" => secret.encoded, "email" => email.text})
       }
+      # TODO:
       # 1. Define the plug for the /doauth/confirm endpoint
       # 2. Get token out of the GET query string
       # 3. Get corresponding token out of credential storage

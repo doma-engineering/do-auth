@@ -32,7 +32,7 @@ defmodule DoAuth.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {DoAuth.Otp.Application, []}
+      mod: {DoAuth.Otp.Application, [:standalone]}
     ]
   end
 
@@ -41,6 +41,7 @@ defmodule DoAuth.MixProject do
     [
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
+      {:cors_plug, "~> 2.0"},
       {:dialyxir, "~> 1.1", only: :dev, runtime: false},
       {:propcheck, "~> 1.4.1", only: [:test, :dev], runtime: true},
       {:jason, "~> 1.3"},

@@ -5,6 +5,9 @@ defmodule DoAuth.Credential do
   Please write as little as possible here, instead make your own GenServers that will write down and navigate domain-specific credentials.
   """
   use GenServer
+
+  import Uptight.Assertions
+
   alias Uptight.Base, as: B
   alias Uptight.Text, as: T
   alias Uptight.Result
@@ -55,7 +58,7 @@ defmodule DoAuth.Credential do
 
     tau_oput = &DynHacks.put_new_value(&1, &2, tau_oget.(&2))
     tau_oput! = &DynHacks.put_value(&1, &2, tau_oget.(&2))
-    oput! = &DynHacks.put_new_value(&1, &2, oget.(&2))
+    oput! = &DynHacks.put_value(&1, &2, oget.(&2))
 
     cred_so_far =
       %{
@@ -84,6 +87,39 @@ defmodule DoAuth.Credential do
     proof = mk_proof(kp, cred_so_far, opts)
 
     cred_so_far |> Map.put("proof", proof) |> Map.put("id", proof["signature"])
+  end
+
+  @doc """
+  Stateful version of this function: ...
+
+  Just add a signature to the proof array of a given verifiable credential.
+  """
+  @spec cosign_credential!(
+          %{:public => Uptight.Binary.t(), optional(any) => any},
+          map(),
+          keyword()
+        ) :: map()
+  def cosign_credential!(kp, cred, opts \\ []) do
+    to_prove =
+      Enum.reduce(
+        ["proof", "id"] ++ (opts[:ignore] || []),
+        cred,
+        fn x, acc ->
+          Map.delete(acc, x)
+        end
+      )
+
+    res = mk_proof(kp, to_prove, opts)
+    proof0 = Map.fetch!(cred, "proof")
+    assert [] != proof0
+
+    proof1 =
+      case proof0 do
+        [_x | _] -> [res | proof0]
+        otherwise -> [res, otherwise]
+      end
+
+    cred |> Map.put("proof", proof1) |> Map.put("id", proof1["signature"])
   end
 
   @doc """
@@ -202,22 +238,24 @@ defmodule DoAuth.Credential do
 
   #### SERVER API, IT'S VERY BORING BUT VERY IMPORTANT ###########################################
 
-  @spec transact_cred(Crypto.keypair_opt(), map(), keyword()) ::
-          {:reply, Result.t(), list()}
+  @spec transact_cred(Crypto.keypair_opt(), map(), keyword()) :: Result.t()
   def transact_cred(kp, payload_map, opts \\ []) do
     GenServer.call(__MODULE__, {:mk_credential, kp, payload_map, opts})
   end
 
-  @spec transact_present(Crypto.keypair(), map(), keyword()) ::
-          {:reply, Result.t(), list()}
+  @spec transact_present(Crypto.keypair(), map(), keyword()) :: Result.t()
   def transact_present(kp, credential_map, opts \\ []) do
     GenServer.call(__MODULE__, {:present_credential, kp, credential_map, opts})
   end
 
-  @spec transact_amend(Crypto.keypair(), map(), map(), keyword()) ::
-          {:reply, Result.t(), list()}
+  @spec transact_amend(Crypto.keypair(), map(), map(), keyword()) :: Result.t()
   def transact_amend(kp, payload_map, credential_map, opts \\ []) do
     GenServer.call(__MODULE__, {:amend_credential, kp, payload_map, credential_map, opts})
+  end
+
+  @spec transact_cosign(Crypto.keypair(), map(), keyword()) :: Result.t()
+  def transact_cosign(kp, credential_map, opts \\ []) do
+    GenServer.call(__MODULE__, {:cosign_credential, kp, credential_map, opts})
   end
 
   @spec all(B.Urlsafe.t()) :: nil | list(map())
@@ -298,10 +336,31 @@ defmodule DoAuth.Credential do
       _ ->
         {:reply,
          Result.new(fn ->
-           %{"credential that has to be amended found" => false} = %{
-             "credential that has to be amended found" => prev_id
-           }
-         end)}
+           assert match?(nil, prev_id), "Credential that has to be amended wasn't found."
+         end), state}
+    end
+  end
+
+  def handle_call(
+        {:cosign_credential, kp, credential_map, opts},
+        _from,
+        %__MODULE__{known_payloads: ps, credentials: cs, amendments: ams} = state
+      ) do
+    # TODO: make sure that this and other handles are not crashing too much.
+    case Result.new(fn ->
+           cosign_credential!(kp, credential_map, opts)
+         end) do
+      res = %Result.Ok{ok: cred1} ->
+        {:reply, res,
+         %__MODULE__{
+           known_payloads: ps,
+           credentials: Map.put_new(cs, cred1["id"], cred1),
+           # TODO: consider registering an amendment
+           amendments: ams
+         }}
+
+      otherwise ->
+        {:reply, otherwise, state}
     end
   end
 
