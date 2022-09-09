@@ -35,14 +35,16 @@ defmodule DoAuth.Mail do
         ["doauth", "confirm"]
         |> map(&Text.new!/1)
 
+    port = opts[:port]
+
     _endpoint_str = Fold.intercalate(public_prefix ++ endpoint, Text.new!("/"))
 
-    # TODO: Port is missing
     uri_str =
       %URI{
         scheme: scheme.text,
         host: homebase_fqdn.text,
         path: "/doauth/confirm",
+        port: port,
         query: URI.encode_query(%{"token" => secret.encoded, "email" => email.text})
       }
       # TODO:

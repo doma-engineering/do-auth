@@ -1,6 +1,6 @@
 defmodule DoAuth.Otp.UserOfa do
   @moduledoc """
-  Rest for one, ensuring that if UserReg crashes, UserSup crashes too, restarting, rereading stuff from persistant database and reregistering registered users with user registry.
+  Rest for one, ensuring that if UserReg crashes, UserSup crashes too, restarting, rereading stuff from persistent database and reregistering registered users with user registry.
 
   OTP Tree:
 

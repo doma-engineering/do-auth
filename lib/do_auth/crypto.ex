@@ -553,6 +553,8 @@ defmodule DoAuth.Crypto do
 
     kp_maybe = cenv.() |> Keyword.get(:server_keypair, {})
 
+    # TODO: Check for entropy, and if entropy is insufficient, crash.
+    # Insufficient entropy could be a signal of misuse of the config.
     if kp_maybe == {} do
       with slip <-
              %{

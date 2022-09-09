@@ -16,6 +16,8 @@ defmodule DoAuth.Invite do
 
   import Uptight.Assertions
 
+  # TODO: State???
+
   @default_invites 2
   @max_persists 10
 

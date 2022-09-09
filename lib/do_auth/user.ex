@@ -92,16 +92,17 @@ defmodule DoAuth.User do
   defp on_reserve_identity(email, nickname, pid, opts) do
     secret = make_shared_secret()
     homebase = opts[:homebase] || "localhost" |> T.new!()
-    confirmation_cred = mk_confirmation_cred(secret, email.text, nickname.text, homebase.text)
+
+    confirmation_cred = mk_confirmation_cred!(secret, email.text, nickname.text, homebase.text)
 
     :sys.replace_state(pid, fn _ ->
       %__MODULE__{email: email, nickname: nickname, cred: confirmation_cred}
     end)
 
-    Mail.confirmation(secret, email, nickname, homebase) |> Mailer.deliver_now!()
+    Mail.confirmation(secret, email, nickname, homebase, opts) |> Mailer.deliver_now!()
   end
 
-  defp mk_confirmation_cred(%U{encoded: x}, email, nickname, homebase) do
+  defp mk_confirmation_cred!(%U{encoded: x}, email, nickname, homebase) do
     kp = %{public: pk} = Crypto.server_keypair()
 
     kp
@@ -115,6 +116,7 @@ defmodule DoAuth.User do
       },
       amendingKeys: [B.safe!(pk).encoded]
     )
+    |> Result.from_ok()
   end
 
   @spec mk_approval_cred!(map(), keyword()) :: map()

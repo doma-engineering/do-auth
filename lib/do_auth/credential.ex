@@ -182,8 +182,8 @@ defmodule DoAuth.Credential do
     Result.new(fn ->
       issuer = pk |> B.safe!()
 
-      {["issuer", ^issuer, "can amend credential"], true} =
-        {["issuer", issuer, "can amend credential"], issuer in credential_map["amendingKeys"]}
+      assert issuer.encoded in credential_map["amendingKeys"],
+             "issuer #{inspect(issuer.encoded)} can amend credential"
 
       opts =
         if :amendingKeys in opts do
@@ -301,9 +301,9 @@ defmodule DoAuth.Credential do
     end
 
     case Result.new(fn ->
-           (is_nil(opts[:persist]) &&
-              {new_cred(mk_or_present_cred, kp, payload_map, opts), state}) ||
-             fetch_cred_maybe.()
+           (is_nil(opts[:no_persist]) &&
+              fetch_cred_maybe.()) ||
+             {new_cred(mk_or_present_cred, kp, payload_map, opts), state}
          end) do
       %Result.Ok{ok: {cred, state1}} -> {:reply, %Result.Ok{ok: cred}, state1}
       %Result.Err{} = e -> {:reply, e, state}
@@ -330,7 +330,7 @@ defmodule DoAuth.Credential do
       [tip | _] ->
         res = amend_credential_map(kp, payload_map, tip, opts)
 
-        (Result.is_ok?(res) && {:reply, res, register_amended.(res[:ok], tip)}) ||
+        (Result.is_ok?(res) && {:reply, res, register_amended.(res.ok, tip)}) ||
           {:reply, res, state}
 
       _ ->
@@ -412,15 +412,15 @@ defmodule DoAuth.Credential do
       else
         get_credential_chain(id, cs, ams, [res])
       end
-    end
-
-    rid = Map.get(ams, id)
-
-    if is_nil(rid) do
-      acc
     else
-      res = Map.get(cs, rid)
-      get_credential_chain(rid, cs, ams, [res | acc])
+      rid = Map.get(ams, id)
+
+      if is_nil(rid) do
+        acc
+      else
+        res = Map.get(cs, rid)
+        get_credential_chain(rid, cs, ams, [res | acc])
+      end
     end
   end
 
