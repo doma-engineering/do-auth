@@ -100,6 +100,8 @@ defmodule DoAuth.User do
     end)
 
     Mail.confirmation(secret, email, nickname, homebase, opts) |> Mailer.deliver_now!()
+
+    %Result.Ok{ok: pid}
   end
 
   defp mk_confirmation_cred!(%U{encoded: x}, email, nickname, homebase) do

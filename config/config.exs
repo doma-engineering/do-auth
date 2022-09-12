@@ -16,6 +16,8 @@ config :do_auth, DoAuth.Web, port: 8111
 
 # config :doma, :crypto, text__secret_key_base: "some very random text, yeah"
 
+if Mix.env() == :test, do: import_config "test.exs"
+
 # config :do_auth, DoAuth.Mailer,
 #   adapter: Bamboo.SMTPAdapter,
 #   server: "smtp.domain",
