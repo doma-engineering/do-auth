@@ -15,6 +15,10 @@ defmodule DoAuth.Router do
     Plug.run(conn, [{DoAuth.Web.Confirm, []}])
   end
 
+  post "/echo" do
+    Plug.run(conn, [{DoAuth.Web.Echo, []}])
+  end
+
   match _ do
     send_resp(conn, 404, "Oopsie")
   end

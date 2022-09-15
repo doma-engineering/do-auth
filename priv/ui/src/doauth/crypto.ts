@@ -103,8 +103,24 @@ export function slipConfig(config: Config): SlipConfig {
     };
 }
 
+export async function mainKeyFromCustomSalt(
+    pass: string,
+    rawSalt: string
+): Promise<Uint8Array> {
+    const { cfg } = await getSodiumAndCfg(sodium0);
+    const { mkey, slip } = await mainKeyInit(pass, slipConfig(cfg), {
+        saltOverride: rawSalt,
+    });
+
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('doauth_slip', JSON.stringify(slip));
+    }
+    return mkey;
+}
+
 export async function mainKeyFromLocalStorageSlip(
-    pass: string
+    pass: string,
+    meta?: { saltOverride?: string }
 ): Promise<Uint8Array> {
     let slipMaybe = null;
     if (typeof window !== 'undefined') {
@@ -114,14 +130,32 @@ export async function mainKeyFromLocalStorageSlip(
         return mainKeyReproduce(pass, JSON.parse(slipMaybe));
     } else {
         const { cfg } = await getSodiumAndCfg(sodium0);
-        const { mkey, slip } = await mainKeyInit(pass, slipConfig(cfg));
+        const { mkey, slip } = await mainKeyInit(pass, slipConfig(cfg), meta);
         if (typeof window !== 'undefined') {
             localStorage.setItem('doauth_slip', JSON.stringify(slip));
         }
         return mkey;
     }
 }
-export const mainKey = mainKeyFromLocalStorageSlip;
+export async function mainKey(
+    pass: string,
+    meta?: { saltOverride?: string },
+    storageMode: 'prefer rewrite' | 'prefer previous' = 'prefer previous'
+) {
+    switch (storageMode) {
+        case 'prefer rewrite': {
+            return (
+                (typeof meta == 'object' &&
+                    typeof meta.saltOverride == 'string' &&
+                    (await mainKeyFromCustomSalt(pass, meta.saltOverride))) ||
+                (await mainKeyFromLocalStorageSlip(pass, meta))
+            );
+        }
+        case 'prefer previous': {
+            return mainKeyFromLocalStorageSlip(pass, meta);
+        }
+    }
+}
 
 export async function mainKeyReproduce(
     pass: string,
@@ -139,15 +173,34 @@ export async function mainKeyReproduce(
     );
 }
 
+export async function generateRandomSalt(saltSize: number): Promise<Encoded> {
+    const sodium = await getSodium(sodium0);
+    const { encoded } = await toUrl(sodium.randombytes_buf(saltSize));
+    return { encoded };
+}
+
+export async function generateSaltFromString(
+    str: string,
+    saltSize: number
+): Promise<Encoded> {
+    const sodium = await getSodium(sodium0);
+    const { encoded } = await toUrl(sodium.crypto_generichash(saltSize, str));
+    return { encoded };
+}
+
 export async function mainKeyInit(
     pass: string,
-    scfg: SlipConfig
+    scfg: SlipConfig,
+    meta?: { saltOverride?: string }
 ): Promise<{ mkey: Uint8Array; slip: Slip }> {
-    const sodium = await getSodium(sodium0);
-    const { encoded } = await toUrl(sodium.randombytes_buf(scfg.saltSize));
+    const salt: Encoded =
+        (typeof meta == 'object' &&
+            typeof meta.saltOverride == 'string' &&
+            (await generateSaltFromString(meta.saltOverride, scfg.saltSize))) ||
+        (await generateRandomSalt(scfg.saltSize));
     const slip = {
         ...scfg,
-        salt: { encoded },
+        salt,
     };
     const mkey = await mainKeyReproduce(pass, slip);
     return { mkey, slip };
