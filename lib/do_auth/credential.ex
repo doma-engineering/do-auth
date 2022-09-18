@@ -370,12 +370,15 @@ defmodule DoAuth.Credential do
     {:reply, Map.get(cs, id), state}
   end
 
-  def handle_call({:get, id, mode}, _from, %__MODULE__{credentials: cs, amendments: ams})
+  def handle_call({:get, id, mode}, _from, %__MODULE__{credentials: cs, amendments: ams} = state)
       when mode == :just_the_tip or mode == :all do
-    case get_credential_chain(id, cs, ams) do
-      [res | _] = xs -> (mode == :all && xs) || res
-      _otherwise -> nil
-    end
+        resp =          
+      case get_credential_chain(id, cs, ams) do
+        [res | _] = xs -> (mode == :all && xs) || res
+        _otherwise -> nil
+      end
+
+    {:reply, resp, state}
   end
 
   @spec handle_cast(tuple(), map()) :: {:noreply, map()}

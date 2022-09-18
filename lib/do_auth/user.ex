@@ -76,27 +76,26 @@ defmodule DoAuth.User do
 
   @spec reserve_identity(T.t(), T.t(), keyword(T.t())) :: Result.t()
   def reserve_identity(%T{} = email, %T{} = nickname, opts \\ []) do
-    case Result.new(fn ->
-           {ok, pid} = UserSup.start_bucket(email, nickname)
+    Result.new(fn ->
+      {ok, pid} = UserSup.start_bucket(email, nickname)
 
-           assert match?(:ok, ok),
-                  "The user with E-mail #{email.text} is already registered."
+      assert match?(:ok, ok),
+            "The user with E-mail #{email.text} is already registered."
+      
+      on_reserve_identity(email, nickname, pid, opts)
 
-           pid
-         end) do
-      %Result.Err{} = err -> err
-      %Result.Ok{ok: pid} -> on_reserve_identity(email, nickname, pid, opts)
-    end
+      pid
+    end)
   end
 
   defp on_reserve_identity(email, nickname, pid, opts) do
     secret = make_shared_secret()
     homebase = opts[:homebase] || "localhost" |> T.new!()
 
-    confirmation_cred = mk_confirmation_cred!(secret, email.text, nickname.text, homebase.text)
+    %{"id" => id} = mk_confirmation_cred!(secret, email.text, nickname.text, homebase.text)
 
     :sys.replace_state(pid, fn _ ->
-      %__MODULE__{email: email, nickname: nickname, cred: confirmation_cred}
+      %__MODULE__{email: email, nickname: nickname, cred: U.new(id)}
     end)
 
     Mail.confirmation(secret, email, nickname, homebase, opts) |> Mailer.deliver_now!()
