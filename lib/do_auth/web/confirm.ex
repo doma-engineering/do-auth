@@ -27,13 +27,14 @@ defmodule DoAuth.Web.Confirm do
         _otherwise -> conn
       end
 
+    cget = fn cred, x -> cred["credentialSubject"][x] end
+
     case Result.new(fn ->
            %{"email" => email_raw, "token" => token_raw} = conn.query_params
            email = email_raw |> T.new!()
            %User{email: _reg_email, cred: cred} = User.get_state!(email)
-           cget = fn x -> cred["credentialSubject"][x] end
 
-           assert cget.("secret") == token_raw,
+           assert cget.(cred, "secret") == token_raw,
                   "User-submitted token is the same as shared secret, recorded by the server."
 
            User.approve_confirmation!(email, opts)

@@ -43,6 +43,18 @@ defmodule DoAuth.User do
     pid
   end
 
+  def by_email(%T{} = email) do
+    Result.new(fn ->
+      by_email!(email)
+    end)
+  end
+
+  @spec cred_by_pid!(pid()) :: map()
+  def cred_by_pid!(pid) do
+    %{cred: cred_id} = :sys.get_state(pid)
+    Credential.tip(cred_id)
+  end
+
   @spec start_link(list(T.t())) :: :ignore | {:error, any} | {:ok, pid}
   def start_link([%T{} = email, %T{} = nickname] = _x) do
     state0 =
@@ -77,14 +89,26 @@ defmodule DoAuth.User do
   @spec reserve_identity(T.t(), T.t(), keyword(T.t())) :: Result.t()
   def reserve_identity(%T{} = email, %T{} = nickname, opts \\ []) do
     Result.new(fn ->
-      {ok, pid} = UserSup.start_bucket(email, nickname)
+      case by_email(email) do
+        %Result.Ok{ok: pid} ->
+          cred = cred_by_pid!(pid)
 
-      assert match?(:ok, ok),
-            "The user with E-mail #{email.text} is already registered."
-      
-      on_reserve_identity(email, nickname, pid, opts)
+          assert cred["credentialSubject"], "Stored credential is actually not a credential."
 
-      pid
+          assert Crypto.verify_map(cred) |> Result.is_err?(),
+                 "E-Mail #{email.text} is still reserved."
+
+          pid
+
+        _ ->
+          {ok, pid} = UserSup.start_bucket(email, nickname)
+
+          assert match?(:ok, ok),
+                 "The user with E-mail #{email.text} is already registered."
+
+          on_reserve_identity(email, nickname, pid, opts)
+          pid
+      end
     end)
   end
 
@@ -92,16 +116,22 @@ defmodule DoAuth.User do
     secret = make_shared_secret()
     homebase = opts[:homebase] || "localhost" |> T.new!()
 
-    %{"id" => id} = mk_confirmation_cred!(secret, email.text, nickname.text, homebase.text)
+    %{"id" => id} = mk_confirmation_cred!(secret, email.text, nickname.text, homebase.text, opts)
 
-    :sys.replace_state(pid, fn _ ->
-      %__MODULE__{email: email, nickname: nickname, cred: U.new(id)}
-    end)
+    GenServer.call(
+      pid,
+      {:update_state, %__MODULE__{email: email, nickname: nickname, cred: B.mk_url!(id)}}
+    )
 
-    Mail.confirmation(secret, email, nickname, homebase, opts) |> Mailer.deliver_now!()
+    if !opts[:no_mail] do
+      Mail.confirmation(secret, email, nickname, homebase, opts) |> Mailer.deliver_now!()
+    end
   end
 
-  defp mk_confirmation_cred!(%U{encoded: x}, email, nickname, homebase) do
+  @spec reservation_seconds() :: non_neg_integer()
+  def reservation_seconds(), do: 15 * 60
+
+  defp mk_confirmation_cred!(%U{encoded: x}, email, nickname, homebase, opts) do
     kp = %{public: pk} = Crypto.server_keypair()
 
     kp
@@ -113,7 +143,8 @@ defmodule DoAuth.User do
         "secret" => x,
         "homebase" => homebase
       },
-      amendingKeys: [B.safe!(pk).encoded]
+      amendingKeys: [B.safe!(pk).encoded],
+      validUntil: opts[:validUntil] || Tau.now() |> DateTime.add(reservation_seconds(), :second)
     )
     |> Result.from_ok()
   end

@@ -12,36 +12,60 @@ defmodule DoAuth.UserTest do
       %Result.Ok{ok: email} = T.new("user@mail.com")
       %Result.Ok{ok: nickname} = T.new("user")
 
-      %{email: email, nickname: nickname}
+      %{email: email, nickname: nickname, fopts: fn -> [no_mail: true, validUntil: Tau.now() |> DateTime.add(700, :millisecond)] end}
     end
 
-    test "with unused email allows to reserve identity", %{email: %T{text: email_text} = email, nickname: nickname} do
-      %Result.Ok{ok: hostname} = T.new("do_auth.com")
-      %Result.Ok{ok: pid} = User.reserve_identity(email, nickname, homebase: hostname)
+    test "with unused email allows to reserve identity once in a while", %{email: %T{text: email_text} = email, nickname: nickname} = ctx do
+      hostname = T.new!("do_auth.com")
+      pid = User.reserve_identity(email, nickname, homebase: hostname) |> Result.from_ok()
 
       assert is_pid(pid)
 
       assert %{
         email: ^email,
         nickname: ^nickname,
-        cred: %Uptight.Base.Urlsafe{} = cred,
+        cred: %Uptight.Base.Urlsafe{} = cred_id,
       } = :sys.get_state(pid)
 
-      assert %{"credentialSubject" => %{"email" => ^email_text}} = DoAuth.Credential.tip(cred)
+      cred = Credential.tip(cred_id)
 
+      t1 = Tau.from_raw_utc_iso8601!(cred["validUntil"])
+      assert DateTime.compare(Tau.now() |> DateTime.add(User.reservation_seconds()), t1) == :gt, "Reservation shall eventually expire."
+
+      # Removed assert here, it wasn't needed, because MatchError would explode first anyway.
+      %{"credentialSubject" => %{"email" => ^email_text}} = cred
+
+      # That's a cute incidental e2e bit! At first I thought, maybe I'm not gonna send mail from tests, but I really like it.
       assert_email_delivered_with(subject: "Welcome to do_auth.com, #{nickname.text}!")
+
+      # ExUnit seems to execute tests asynchronously even when async is set to false.
+      # That's why we unify the two tests for reproducible test success!
+
+      User.reserve_identity(ctx.email, ctx.nickname)
+
+      # This assert also doesn't do anything!
+      assert %Result.Err{err: %Uptight.Trace{
+        exception: %Uptight.AssertionError{
+          message: msg
+        }}} = User.reserve_identity(ctx.email, ctx.nickname)
+
+      # I'm not a *huge* fan of failing with messaging change,
+      # but it's also OK in this case, because we make sure that the message can be relayed to frontend verbatim.
+      assert msg == "E-Mail #{ctx.email.text} is still reserved."
     end
 
-    # TODO: How to wipe our credential store correctly?
-    # test "with reserved identity - returns an error", ctx do
-    #   User.reserve_identity(ctx.email, ctx.nickname)
+    test "there is a facility to invalidate a booked identity", ctx do
+      sflip = &(T.un(&1) |> String.reverse() |> T.new!())
+      email = ctx.email |> sflip.()
+      name = ctx.nickname |> sflip.()
 
-    #   assert %Result.Err{err: %Uptight.Trace{
-    #     exception: %Uptight.AssertionError{
-    #       message: msg
-    #     }}} = User.reserve_identity(ctx.email, ctx.nickname)
+      _pid = User.reserve_identity(email, name, ctx.fopts.()) |> Result.from_ok()
+      assert User.reserve_identity(email, name, ctx.fopts.()) |> Result.is_err?(), "If we double-reserve quickly, we still fail."
 
-    #   assert msg == "The user with E-mail #{ctx.email.text} is already registered."
-    # end
+      :timer.sleep(700)
+
+      pid2_maybe = User.reserve_identity(email, name, ctx.fopts.())
+      assert pid2_maybe |> Result.is_ok?(), "Reservation expired, so we can reserve again against the same E-Mail"
+    end
   end
 end
