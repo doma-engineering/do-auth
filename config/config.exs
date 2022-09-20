@@ -1,8 +1,14 @@
+# Open config, be sure that all written there can see anyone!
+
 import Config
 
 config :logger,
   handle_otp_reports: true,
   handle_sasl_reports: true
+
+config :do_auth, DoAuth.Web, port: 8111
+
+if Mix.env() == :test, do: import_config("test.exs")
 
 secret_cfg = "#{Mix.env()}.secret.exs"
 
@@ -10,13 +16,22 @@ if File.exists?("./config/" <> secret_cfg) do
   import_config secret_cfg
 end
 
-config :do_auth, DoAuth.Web, port: 8111
+# !!! Make secret configs for saving sensitivity config data !!!
 
-### Don't use the following keys in this file, the following lines are just an example for you to make your secret configs!
+# How to make secret config?
+# 1) they must be saved at same level with that file
+# 2) secret config name is [run mode].secret.exs
+#                   it mean you will have:
+#                                         prod.secret.exs
+#                                          dev.secret.exs
+#                                         test.secret.exs
+#
 
-config :doma, :crypto, text__secret_key_base: "some very random text, yeah", server_keypair: {}
+### ! Don't use the following keys in this file, the following lines are just an example for you to make your secret configs!
 
-if Mix.env() == :test, do: import_config "test.exs"
+#
+# config :doma, :crypto, text__secret_key_base: "some very random text, yeah", server_keypair: {}
+#
 
 # config :do_auth, DoAuth.Mailer,
 #   adapter: Bamboo.SMTPAdapter,

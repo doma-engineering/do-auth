@@ -43,6 +43,7 @@ defmodule DoAuth.User do
     pid
   end
 
+  @spec by_email(T.t()) :: Result.t()
   def by_email(%T{} = email) do
     Result.new(fn ->
       by_email!(email)
@@ -120,7 +121,7 @@ defmodule DoAuth.User do
 
     GenServer.call(
       pid,
-      {:update_state, %__MODULE__{email: email, nickname: nickname, cred: B.mk_url!(id)}}
+      {:replace_state, %__MODULE__{email: email, nickname: nickname, cred: B.mk_url!(id)}}
     )
 
     if !opts[:no_mail] do
@@ -203,7 +204,7 @@ defmodule DoAuth.User do
   end
 
   # Replace old state (state) with new state (state1), and return old state.
-  def handle_call({:update_state, state1}, _from, state) do
+  def handle_call({:replace_state, state1}, _from, state) do
     {:reply, state, state1}
   end
 

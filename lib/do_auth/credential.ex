@@ -372,7 +372,7 @@ defmodule DoAuth.Credential do
 
   def handle_call({:get, id, mode}, _from, %__MODULE__{credentials: cs, amendments: ams} = state)
       when mode == :just_the_tip or mode == :all do
-        resp =          
+    resp =
       case get_credential_chain(id, cs, ams) do
         [res | _] = xs -> (mode == :all && xs) || res
         _otherwise -> nil
