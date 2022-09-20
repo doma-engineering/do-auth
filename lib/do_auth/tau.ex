@@ -1,8 +1,9 @@
 defmodule Tau do
   @moduledoc """
+  UTC-only timestamps, with resolution up to nanoseconds.
+
+  We used to support VC-data-model-compatible timestamps, but we stopped doing it because of race conditions in tests etc.
   I honestly have no idea why VC data model wants time encoded up to seconds, but ok.
-  This module is for VC data model compatible timestamps, and, perhaps, some other time-related stuff we might need here.
-  Maybe vector clocks and such? I dunno.
   """
 
   alias Uptight.Text, as: T
@@ -26,7 +27,7 @@ defmodule Tau do
   PostgreSQL-compatible ISO string to DateTime.
   """
   @spec from_utc_iso8601(T.t()) :: Result.t()
-  def from_utc_iso8601(iso_txt = %T{}) do
+  def from_utc_iso8601(%T{} = iso_txt) do
     iso_str = iso_txt |> T.un()
 
     case DateTime.from_iso8601(iso_str) do
@@ -46,7 +47,7 @@ defmodule Tau do
   Banging version!
   """
   @spec from_utc_iso8601!(T.t()) :: DateTime.t()
-  def from_utc_iso8601!(iso_txt = %T{}) do
+  def from_utc_iso8601!(%T{} = iso_txt) do
     from_utc_iso8601(iso_txt) |> Result.from_ok()
   end
 

@@ -12,7 +12,6 @@ defmodule DoAuth.Regression18Test do
 
     invalid_subject = valid_credential["credentialSubject"] |> Map.replace("untampered", "asd")
     invalid_credential = valid_credential |> Map.replace("credentialSubject", invalid_subject)
-    result = Crypto.verify_map(invalid_credential)
     assert Crypto.verify_map(invalid_credential) |> Result.is_err?()
   end
 end

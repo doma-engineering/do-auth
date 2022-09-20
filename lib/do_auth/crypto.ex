@@ -332,6 +332,13 @@ defmodule DoAuth.Crypto do
           proof -> [proof]
         end
 
+      valid_until = Map.get(verifiable_map, "validUntil", Map.get(verifiable_map, "expirationDate"))
+
+      if valid_until do
+        t1 = valid_until |> Tau.from_raw_utc_iso8601!()
+        :lt = DateTime.compare(Tau.now(), t1)
+      end
+
       true =
         Enum.reduce_while(
           proofs,
@@ -348,7 +355,6 @@ defmodule DoAuth.Crypto do
     }
 
     extracted
-    # |> map(&base2raw/1)
     |> verify_one_sig(verifiable_canonical, verifiable_map)
   end
 
