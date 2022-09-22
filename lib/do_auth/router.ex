@@ -6,10 +6,10 @@ defmodule DoAuth.Router do
   """
   use Plug.Router
 
-  plug(:match)
-  plug(CORSPlug)
-  plug(Plug.Logger, log: :debug)
-  plug(:dispatch)
+  plug CORSPlug
+  plug Plug.Logger, log: :debug
+  plug :match
+  plug :dispatch
 
   get "/doauth/confirm" do
     Plug.run(conn, [{DoAuth.Web.Confirm, []}])

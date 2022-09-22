@@ -152,7 +152,9 @@ defmodule DoAuth.User do
 
   @spec mk_approval_cred!(map(), keyword()) :: map()
   def mk_approval_cred!(confirmation_cred, opts) do
-    cget = fn x -> confirmation_cred["credentialSubject"][x] end
+    cred = Credential.tip(confirmation_cred)
+
+    cget = fn x -> cred["credentialSubject"][x] end
 
     res =
       Crypto.server_keypair()
@@ -215,7 +217,7 @@ defmodule DoAuth.User do
   end
 
   # Silently replace old state (state) with new state (state1).
-  def handle_call({:update_state_, state1}, _from, _state) do
+  def handle_call({:update_state, state1}, _from, _state) do
     {:noreply, state1}
   end
 end
