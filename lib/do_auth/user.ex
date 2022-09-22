@@ -165,7 +165,7 @@ defmodule DoAuth.User do
           "kind" => "approved",
           "reasons" => ["email" | Crypto.canonicalise_term!(opts[:reasons] || [])]
         },
-        confirmation_cred
+        cred
       )
 
     res |> Result.from_ok()
@@ -185,7 +185,7 @@ defmodule DoAuth.User do
   @spec update_state!(T.t(), __MODULE__.t()) :: __MODULE__.t()
   def update_state!(email, state1) do
     pid = by_email!(email)
-    GenServer.call(pid, {:update_state, state1})
+    GenServer.cast(pid, {:update_state, state1})
   end
 
   # Modify state using function f.
@@ -217,7 +217,7 @@ defmodule DoAuth.User do
   end
 
   # Silently replace old state (state) with new state (state1).
-  def handle_call({:update_state, state1}, _from, _state) do
+  def handle_cast({:update_state, state1}, _state) do
     {:noreply, state1}
   end
 end
