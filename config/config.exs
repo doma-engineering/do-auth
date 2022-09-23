@@ -6,7 +6,12 @@ config :logger,
   handle_otp_reports: true,
   handle_sasl_reports: true
 
+config :do_auth, DoAuth.Web, host: "localhost"
 config :do_auth, DoAuth.Web, port: 8111
+config :do_auth, DoAuth.Web, front_name: "DoAuth"
+config :do_auth, DoAuth.Web, front_host: "localhost"
+config :do_auth, DoAuth.Web, front_port: 3000
+config :do_auth, DoAuth.Web, front_endpoint: ["doauth", "confirm"]
 
 if Mix.env() == :test, do: import_config("test.exs")
 

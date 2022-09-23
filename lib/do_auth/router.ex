@@ -15,6 +15,12 @@ defmodule DoAuth.Router do
     Plug.run(conn, [{DoAuth.Web.Confirm, []}])
   end
 
+  get "/doauth/reserve" do
+    Plug.run(conn, [
+      {DoAuth.Web.Reserve, []}
+    ])
+  end
+
   post "/echo" do
     Plug.run(conn, [{DoAuth.Web.Echo, []}])
   end

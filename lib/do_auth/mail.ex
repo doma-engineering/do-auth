@@ -7,7 +7,7 @@ defmodule DoAuth.Mail do
   import Witchcraft.Functor
 
   alias Uptight.Base
-  alias Uptight.Text
+  alias Uptight.Text, as: T
   alias Uptight.Fold
 
   defp noreply(to, subject, html, text) do
@@ -20,63 +20,65 @@ defmodule DoAuth.Mail do
     )
   end
 
-  @spec confirmation(Base.t(), Text.t(), Text.t(), Text.t(), keyword(Text.t() | list(Text.t()))) ::
+  @spec confirmation(Base.t(), T.t(), T.t(), keyword(T.t() | list(T.t()))) ::
           Bamboo.Email.t()
-  def confirmation(secret, email, nickname, homebase_fqdn, opts \\ []) do
-    scheme =
-      (homebase_fqdn.text == "localhost" && "http" |> Text.new!()) ||
-        (opts[:scheme] || "https" |> Text.new!())
+  def confirmation(secret, email, nickname, opts \\ []) do
+    require Logger
 
-    public_prefix = opts[:public_prefix] || "public" |> Text.new!()
+    homebase_fqdn = opts[:homebase] || "localhost" |> T.new!()
+
+    scheme =
+      (homebase_fqdn.text == "localhost" && "http" |> T.new!()) ||
+        (opts[:scheme] || "https" |> T.new!())
+
+    public_prefix = opts[:public_prefix] || "public" |> T.new!()
     public_prefix = (is_list(public_prefix) && public_prefix) || [public_prefix]
 
     endpoint =
       opts[:endpoint] ||
         ["doauth", "confirm"]
-        |> map(&Text.new!/1)
+        |> map(&T.new!/1)
 
-    port = opts[:port]
+    port = String.to_integer(opts[:port].text)
 
-    _endpoint_str = Fold.intercalate(public_prefix ++ endpoint, Text.new!("/"))
+    _endpoint_str = Fold.intercalate(public_prefix ++ endpoint, T.new!("/"))
+    endpoint_path = Fold.intercalate([T.new!("") | endpoint], T.new!("/"))
 
     uri_str =
       %URI{
         scheme: scheme.text,
         host: homebase_fqdn.text,
-        path: "/doauth/confirm",
+        path: endpoint_path.text,
         port: port,
         query: URI.encode_query(%{"token" => secret.encoded, "email" => email.text})
       }
-      # TODO:
-      # 1. Define the plug for the /doauth/confirm endpoint
-      # 2. Get token out of the GET query string
-      # 3. Get corresponding token out of credential storage
-      # 4. Compare those and if they match print something funny to logs
       |> URI.to_string()
+
+    front_name = opts[:front_name] || "DoAuth" |> T.new!()
 
     html =
       """
-      <h2>Welcome to ZeroHR!</h2>
+      <h2>Welcome to #{front_name.text}!</h2>
       <div>Click <a href="#{uri_str}">here</a> to register as #{nickname.text}.</div>
       <br />
       <small>If you didn't register with #{homebase_fqdn.text}, ignore this E-Mail.</small>
       """
-      |> Text.new!()
+      |> T.new!()
 
     text =
       """
-      Welcome to ZeroHR!
+      Welcome to #{front_name.text}!
       ==================
 
       Follow #{uri_str} to register as #{nickname.text}.
 
       If you didn't register with #{homebase_fqdn.text}, ignore this E-Mail.
       """
-      |> Text.new!()
+      |> T.new!()
 
     noreply(
       email,
-      "Welcome to #{homebase_fqdn.text}, #{nickname.text}!" |> Text.new!(),
+      "Welcome to #{front_name.text}, #{nickname.text}!" |> T.new!(),
       html,
       text
     )

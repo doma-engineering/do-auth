@@ -125,7 +125,7 @@ defmodule DoAuth.User do
     )
 
     if !opts[:no_mail] do
-      Mail.confirmation(secret, email, nickname, homebase, opts) |> Mailer.deliver_now!()
+      Mail.confirmation(secret, email, nickname, opts) |> Mailer.deliver_now!()
     end
   end
 
