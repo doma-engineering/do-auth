@@ -111,10 +111,7 @@ export async function mainKeyFromCustomSalt(
     const { mkey, slip } = await mainKeyInit(pass, slipConfig(cfg), {
         saltOverride: rawSalt,
     });
-
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('doauth_slip', JSON.stringify(slip));
-    }
+    setSlip(slip);
     return mkey;
 }
 
@@ -122,39 +119,24 @@ export async function mainKeyFromLocalStorageSlip(
     pass: string,
     meta?: { saltOverride?: string }
 ): Promise<Uint8Array> {
-    let slipMaybe = null;
-    if (typeof window !== 'undefined') {
-        slipMaybe = localStorage.getItem('doauth_slip');
-    }
+    const slipMaybe = getSlipMaybe();
     if (slipMaybe) {
         return mainKeyReproduce(pass, JSON.parse(slipMaybe));
     } else {
         const { cfg } = await getSodiumAndCfg(sodium0);
         const { mkey, slip } = await mainKeyInit(pass, slipConfig(cfg), meta);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('doauth_slip', JSON.stringify(slip));
-        }
+        setSlip(slip);
         return mkey;
     }
 }
-export async function mainKey(
-    pass: string,
-    meta?: { saltOverride?: string },
-    storageMode: 'prefer rewrite' | 'prefer previous' = 'prefer previous'
-) {
-    switch (storageMode) {
-        case 'prefer rewrite': {
-            return (
-                (typeof meta == 'object' &&
-                    typeof meta.saltOverride == 'string' &&
-                    (await mainKeyFromCustomSalt(pass, meta.saltOverride))) ||
-                (await mainKeyFromLocalStorageSlip(pass, meta))
-            );
-        }
-        case 'prefer previous': {
-            return mainKeyFromLocalStorageSlip(pass, meta);
-        }
-    }
+
+export async function mainKey(pass: string, meta?: { saltOverride?: string }) {
+    return (
+        (typeof meta == 'object' &&
+            typeof meta.saltOverride == 'string' &&
+            (await mainKeyFromCustomSalt(pass, meta.saltOverride))) ||
+        (await mainKeyFromLocalStorageSlip(pass, meta))
+    );
 }
 
 export async function mainKeyReproduce(
@@ -226,6 +208,18 @@ export async function deriveSigningKeypair<T extends Ureu>(
         public: (await toT(publicKey, t)) as T,
         secret: (await toT(privateKey, t)) as T,
     };
+}
+
+export function setSlip(slip: Slip) {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('doauth_slip', JSON.stringify(slip));
+    }
+}
+
+export function getSlipMaybe() {
+    return typeof window !== 'undefined'
+        ? localStorage.getItem('doauth_slip')
+        : null;
 }
 
 export async function sign<T extends Ureu>(
