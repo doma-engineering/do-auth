@@ -39,7 +39,7 @@ defmodule DoAuth.Mail do
         ["doauth", "confirm"]
         |> map(&T.new!/1)
 
-    port = String.to_integer(opts[:port].text)
+    port = (opts[:port] != nil && String.to_integer(opts[:port].text)) || nil
 
     _endpoint_str = Fold.intercalate(public_prefix ++ endpoint, T.new!("/"))
     endpoint_path = Fold.intercalate([T.new!("") | endpoint], T.new!("/"))
