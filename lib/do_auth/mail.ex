@@ -54,7 +54,7 @@ defmodule DoAuth.Mail do
       }
       |> URI.to_string()
 
-    front_name = opts[:front_name] || "DoAuth" |> T.new!()
+    front_name = opts[:front_name] || opts[:homebase] || "DoAuth" |> T.new!()
 
     html =
       """
