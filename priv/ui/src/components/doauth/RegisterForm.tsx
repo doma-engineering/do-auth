@@ -3,7 +3,7 @@ import { ChangeEvent, FormEvent, useState } from 'react';
 import { makeKeypairAndSaveToSessionStorage } from '../../atoms/password';
 import FormInputLine from '../form/FormInputLine';
 
-function SimpleRegister({ name }: { name: string }) {
+function RegisterForm({ name }: { name: string }) {
     const [, saveKeyPair] = useAtom(makeKeypairAndSaveToSessionStorage);
     const [password, setPassword] = useState('');
     const handleChangePassword = (e: ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +98,7 @@ function SimpleRegister({ name }: { name: string }) {
     );
 }
 
-export default SimpleRegister;
+export default RegisterForm;
 
 // --------------------- Helps functions ---------------------
 

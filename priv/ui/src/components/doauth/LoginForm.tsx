@@ -5,7 +5,7 @@ import { keyPairSessionStorage } from '../../atoms/password';
 import { mkCredential } from '../../doauth/credential';
 import { Cannable, deriveSigningKeypair, mainKey } from '../../doauth/crypto';
 
-function SimpleLogin() {
+function LoginForm() {
     const [, displayCredential] = useAtom(objectToView);
     const [, saveKeyPair] = useAtom(keyPairSessionStorage);
 
@@ -75,4 +75,4 @@ function SimpleLogin() {
     );
 }
 
-export default SimpleLogin;
+export default LoginForm;

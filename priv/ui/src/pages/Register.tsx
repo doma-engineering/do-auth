@@ -1,9 +1,9 @@
-import SimpleRegister from '../components/doauth/SimpleRegister';
+import RegisterForm from '../components/doauth/RegisterForm';
 
 function RegisterPage() {
     return (
         <>
-            <SimpleRegister name="mainRegistrationForm" />
+            <RegisterForm name="mainRegistrationForm" />
         </>
     );
 }
