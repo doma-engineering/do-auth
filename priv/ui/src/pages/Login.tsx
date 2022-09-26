@@ -1,5 +1,5 @@
-import JsonView from '../feature/JsonView';
-import SimpleLogin from '../SimpleLogin';
+import JsonView from '../components/devHelps/JsonView';
+import SimpleLogin from '../components/doauth/SimpleLogin';
 
 function LoginPage() {
     return (

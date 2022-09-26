@@ -1,72 +1,24 @@
 import { useAtom } from 'jotai';
 import { ChangeEvent, FormEvent, useState } from 'react';
-import { keyPairSessionStorage } from './atoms/password';
-import FormInputLine from './components/form/FormInput';
-import { deriveSigningKeypair, mainKey } from './doauth/crypto';
+import { makeKeypairAndSaveToSessionStorage } from '../../atoms/password';
+import FormInputLine from '../form/FormInputLine';
 
-const bellowInput = (text: string | string[]) => (
-    <div className="pt-1 flex flex-col items-end">
-        {typeof text === 'string' ? (
-            <div className="text-center w-[210px]">{text}</div>
-        ) : (
-            text.map((fragment, i) => (
-                <div key={`err_frag_${i}`} className="text-center w-[210px]">
-                    {fragment}
-                </div>
-            ))
-        )}
-    </div>
-);
-
-function SimpleRegister() {
-    const [, saveKeyPair] = useAtom(keyPairSessionStorage);
+function SimpleRegister({ name }: { name: string }) {
+    const [, saveKeyPair] = useAtom(makeKeypairAndSaveToSessionStorage);
     const [password, setPassword] = useState('');
     const handleChangePassword = (e: ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
     };
 
     const onSubmit = async (event: FormEvent) => {
-        // Disable page reload
-        event.preventDefault();
-
-        // Get input values
-        // (event.target as HTMLFormElement).elements :
-        // 0: fieldset :
-        // 1: input    : nickname
-        // 2: input    : email
-        // 3: fieldset :
-        // 4: input    : password
-        // 5: input    : passwordConfirm
-        // !! Indexes may be out of date, if markup changes !!
-        const [nickname, email, password] = [
-            1, // nickname index
-            2, // email index
-            4, // password index
-        ].map(
-            (index) =>
-                (
-                    (event.target as HTMLFormElement).elements[
-                        index
-                    ] as HTMLInputElement
-                ).value
+        event.preventDefault(); // Disable page reload
+        const [nickname, email, password] = getInputValues(
+            event.target as HTMLFormElement,
+            name,
+            ['nickname', 'email', 'password']
         );
-
-        // Save password as key pair
-        const mainKeyValue = await mainKey(password, {
-            saltOverride: email.toLowerCase(),
-        });
-        const keyPair = await deriveSigningKeypair(mainKeyValue, 1);
-        saveKeyPair(keyPair);
-
-        // Make submit
-        const queryReservationUrl = new URL(
-            'http://localhost:8111/doauth/reserve'
-        );
-        queryReservationUrl.searchParams.append('email', email);
-        queryReservationUrl.searchParams.append('nickname', nickname);
-        await fetch(queryReservationUrl, {
-            method: 'GET',
-        });
+        saveKeyPair({ password, email }); // Save password as key pair to Session Storage
+        makeSubmit(email, nickname);
     };
 
     return (
@@ -74,6 +26,7 @@ function SimpleRegister() {
             <h1 className="text-xl text-center mb-5">Registration form</h1>
             <fieldset className="fieldset-lines-bt">
                 <FormInputLine
+                    name={`${name}:nickname`}
                     label="Nickname:"
                     errorMessage={bellowInput([
                         'Please enter valid nickname;',
@@ -86,8 +39,9 @@ function SimpleRegister() {
                         pattern: '^[a-zA-Z\\s_\\-0-9]{1,50}$',
                         required: true,
                     }}
-                />{' '}
+                />
                 <FormInputLine
+                    name={`${name}:email`}
                     label="Email:"
                     errorMessage={bellowInput('Please enter valid email.')}
                     inputProps={{
@@ -102,6 +56,7 @@ function SimpleRegister() {
             </fieldset>
             <fieldset className="fieldset-lines-b">
                 <FormInputLine
+                    name={`${name}:password`}
                     label="Password:"
                     errorMessage={bellowInput(
                         'Password must be at least 8 digits.'
@@ -116,6 +71,7 @@ function SimpleRegister() {
                     }}
                 />
                 <FormInputLine
+                    name={`${name}:passwordConfirm`}
                     label="Confirm password:"
                     errorMessage={bellowInput("Password don't match.")}
                     inputProps={{
@@ -143,3 +99,45 @@ function SimpleRegister() {
 }
 
 export default SimpleRegister;
+
+// --------------------- Helps functions ---------------------
+
+// Centred the error text below input for a 'error' in FormInputLine arguments,
+// based on the inputProps have a className with w-[210px]
+const bellowInput = (text: string | string[]) => (
+    <div className="pt-1 flex flex-col items-end">
+        {typeof text === 'string' ? (
+            <div className="text-center w-[210px]">{text}</div>
+        ) : (
+            text.map((fragment, i) => (
+                <div key={`err_frag_${i}`} className="text-center w-[210px]">
+                    {fragment}
+                </div>
+            ))
+        )}
+    </div>
+);
+
+// inputs name's should be  "${formName}:${fieldName}"
+// formName - is metaphoric, more often formName is higher component name, need for make uniq names for the components duplicate.
+const getInputValues = (
+    form: HTMLFormElement,
+    formName: string,
+    fields: string[]
+) =>
+    fields
+        .map((fieldName) => `${formName}${fieldName}`)
+        .map(
+            (elementName) =>
+                (form.elements.namedItem(elementName) as HTMLInputElement).value
+        );
+
+// Call mail reserve endpoint, that should send confirmation mail on email.
+const makeSubmit = async (email: string, nickname: string) => {
+    const queryReservationUrl = new URL('http://localhost:8111/doauth/reserve');
+    queryReservationUrl.searchParams.append('email', email);
+    queryReservationUrl.searchParams.append('nickname', nickname);
+    fetch(queryReservationUrl, {
+        method: 'GET',
+    });
+};

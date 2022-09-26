@@ -1,9 +1,9 @@
 import { useAtom } from 'jotai';
 import { FormEvent } from 'react';
-import { objectToView } from './atoms/feature';
-import { keyPairSessionStorage } from './atoms/password';
-import { mkCredential } from './doauth/credential';
-import { Cannable, deriveSigningKeypair, mainKey } from './doauth/crypto';
+import { objectToView } from '../../atoms/devHelpsComponents';
+import { keyPairSessionStorage } from '../../atoms/password';
+import { mkCredential } from '../../doauth/credential';
+import { Cannable, deriveSigningKeypair, mainKey } from '../../doauth/crypto';
 
 function SimpleLogin() {
     const [, displayCredential] = useAtom(objectToView);

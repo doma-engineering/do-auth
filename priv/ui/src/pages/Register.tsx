@@ -1,10 +1,9 @@
-import { FormEvent } from 'react';
-import SimpleRegister from '../SimpleRegister';
+import SimpleRegister from '../components/doauth/SimpleRegister';
 
 function RegisterPage() {
     return (
         <>
-            <SimpleRegister />
+            <SimpleRegister name="mainRegistrationForm" />
         </>
     );
 }

@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai';
-import { objectToView } from '../atoms/feature';
+import { objectToView } from '../../atoms/devHelpsComponents';
 
 // That is only developers helps component
 function JsonView({

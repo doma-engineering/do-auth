@@ -1,10 +1,12 @@
 import { ChangeEvent, FocusEvent, HTMLProps, ReactNode, useState } from 'react';
 
 function FormInputLine({
+    name,
     label,
     errorMessage,
     inputProps,
 }: {
+    name: string;
     label: ReactNode;
     errorMessage?: ReactNode;
     inputProps?: HTMLProps<HTMLInputElement>;
@@ -53,6 +55,7 @@ function FormInputLine({
             <label className="flex justify-between">
                 <span className="pr-2">{label}</span>
                 <input
+                    name={name}
                     {...inputProps}
                     className={`${inputProps?.className}
                                 ${
@@ -66,7 +69,7 @@ function FormInputLine({
             </label>
             <div
                 className={`text-error w-full text-center text-sm
-                                ${touched && invalid ? '' : 'hidden'}`}
+                            ${touched && invalid ? '' : 'hidden'}`}
             >
                 {errorMessage}
             </div>
