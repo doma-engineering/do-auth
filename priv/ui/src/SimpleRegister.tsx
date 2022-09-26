@@ -30,16 +30,30 @@ function SimpleRegister() {
         event.preventDefault();
 
         // Get input values
-        const { nickname, email, password } =
-            event.target as typeof event.target & {
-                nickname: { value: string };
-                email: { value: string };
-                password: { value: string };
-            };
+        // (event.target as HTMLFormElement).elements :
+        // 0: fieldset :
+        // 1: input    : nickname
+        // 2: input    : email
+        // 3: fieldset :
+        // 4: input    : password
+        // 5: input    : passwordConfirm
+        // !! Indexes may be out of date, if markup changes !!
+        const [nickname, email, password] = [
+            1, // nickname index
+            2, // email index
+            4, // password index
+        ].map(
+            (index) =>
+                (
+                    (event.target as HTMLFormElement).elements[
+                        index
+                    ] as HTMLInputElement
+                ).value
+        );
 
         // Save password as key pair
-        const mainKeyValue = await mainKey(password.value, {
-            saltOverride: email.value.toLowerCase(),
+        const mainKeyValue = await mainKey(password, {
+            saltOverride: email.toLowerCase(),
         });
         const keyPair = await deriveSigningKeypair(mainKeyValue, 1);
         saveKeyPair(keyPair);
@@ -48,8 +62,8 @@ function SimpleRegister() {
         const queryReservationUrl = new URL(
             'http://localhost:8111/doauth/reserve'
         );
-        queryReservationUrl.searchParams.append('email', email.value);
-        queryReservationUrl.searchParams.append('nickname', nickname.value);
+        queryReservationUrl.searchParams.append('email', email);
+        queryReservationUrl.searchParams.append('nickname', nickname);
         await fetch(queryReservationUrl, {
             method: 'GET',
         });
