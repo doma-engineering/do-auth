@@ -11,7 +11,7 @@ config :do_auth, DoAuth.Web, port: 8111
 config :do_auth, DoAuth.Web, front_name: "DoAuth"
 config :do_auth, DoAuth.Web, front_host: "localhost"
 config :do_auth, DoAuth.Web, front_port: 3000
-config :do_auth, DoAuth.Web, front_endpoint: ["doauth", "confirm"]
+config :do_auth, DoAuth.Web, front_endpoint: ["confirm"]
 
 if Mix.env() == :test, do: import_config("test.exs")
 

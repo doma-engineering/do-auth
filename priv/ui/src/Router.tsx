@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import NavigationBar from './components/navigation/NavigationBar';
+import ConfirmationPage from './pages/Confirm';
 import LoginPage from './pages/Login';
+import MailWaitingPage from './pages/MailWaiting';
 import RegisterPage from './pages/Register';
 
 function Router() {
@@ -15,6 +17,8 @@ function Router() {
                     <Route path="/" element={<Navigate to="/register" />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/confirm" element={<ConfirmationPage />} />
+                    <Route path="/waiting" element={<MailWaitingPage />} />
                     <Route
                         path="*"
                         element={

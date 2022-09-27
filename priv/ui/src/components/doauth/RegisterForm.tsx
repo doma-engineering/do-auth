@@ -1,14 +1,13 @@
 import { useAtom } from 'jotai';
 import { ChangeEvent, FormEvent, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { makeKeypairAndSaveToSessionStorage } from '../../atoms/password';
 import FormInputLine from '../form/FormInputLine';
 
-function RegisterForm({ name }: { name: string }) {
+export default function RegisterForm({ name }: { name: string }) {
+    const navigate = useNavigate();
     const [, saveKeyPair] = useAtom(makeKeypairAndSaveToSessionStorage);
     const [password, setPassword] = useState('');
-    const handleChangePassword = (e: ChangeEvent<HTMLInputElement>) => {
-        setPassword(e.target.value);
-    };
 
     const onSubmit = async (event: FormEvent) => {
         event.preventDefault(); // Disable page reload
@@ -19,6 +18,7 @@ function RegisterForm({ name }: { name: string }) {
         );
         saveKeyPair({ password, email }); // Save password as key pair to Session Storage
         makeSubmit(email, nickname);
+        navigate('/waiting');
     };
 
     return (
@@ -66,7 +66,8 @@ function RegisterForm({ name }: { name: string }) {
                         className: 'w-[210px]',
                         placeholder: '••••••••',
                         pattern: '^.{8,}$',
-                        onChange: handleChangePassword,
+                        onChange: (e: ChangeEvent<HTMLInputElement>) =>
+                            setPassword(e.target.value),
                         required: true,
                     }}
                 />
@@ -98,8 +99,6 @@ function RegisterForm({ name }: { name: string }) {
     );
 }
 
-export default RegisterForm;
-
 // --------------------- Helps functions ---------------------
 
 // Centred the error text below input for a 'error' in FormInputLine arguments,
@@ -126,7 +125,7 @@ const getInputValues = (
     fields: string[]
 ) =>
     fields
-        .map((fieldName) => `${formName}${fieldName}`)
+        .map((fieldName) => `${formName}:${fieldName}`)
         .map(
             (elementName) =>
                 (form.elements.namedItem(elementName) as HTMLInputElement).value

@@ -33,7 +33,7 @@ function JsonElements({ obj, level = 0 }: { obj: any; level?: number }) {
         if (typeof obj === 'object') {
             let res = [];
             for (var child in obj) {
-                if (typeof obj[child] === 'object') {
+                if (typeof obj[child] === 'object' && obj[child] !== null) {
                     res.push(
                         <div key={`${level}-${child}-obj_name`}>
                             <span
@@ -85,7 +85,11 @@ function JsonElements({ obj, level = 0 }: { obj: any; level?: number }) {
                                 className="text-blue-200"
                             >
                                 {' '}
-                                {obj[child]}
+                                {typeof obj[child] === 'boolean'
+                                    ? obj[child]
+                                        ? 'true'
+                                        : 'false'
+                                    : obj[child]}
                             </span>
                         </div>
                     );
