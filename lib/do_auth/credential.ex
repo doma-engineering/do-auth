@@ -84,7 +84,7 @@ defmodule DoAuth.Credential do
         cred_so_far
       end
 
-    proof = mk_proof(kp, cred_so_far, opts)
+      proof = mk_proof(kp, cred_so_far, opts)
 
     cred_so_far |> Map.put("proof", proof) |> Map.put("id", proof["signature"])
   end
