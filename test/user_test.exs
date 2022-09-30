@@ -29,8 +29,8 @@ defmodule DoAuth.UserTest do
       %{
         email: ^email,
         nickname: ^nickname,
-        cred: %Uptight.Base.Urlsafe{} = cred_id
-      } = :sys.get_state(pid)
+        cred_id: %Uptight.Base.Urlsafe{} = cred_id
+      } = User.get_state!(pid)
 
       cred = Credential.tip(cred_id)
 

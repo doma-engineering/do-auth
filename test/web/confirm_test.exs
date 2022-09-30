@@ -9,7 +9,7 @@ defmodule DoAuth.Web.ConfirmTest do
 
   describe "DoAuth.Web.Confirm Plug" do
     setup do
-      email = T.new!("user@mail.com")
+      email = T.new!("user2@mail.com")
       nickname = T.new!("user")
 
       %{
@@ -27,9 +27,12 @@ defmodule DoAuth.Web.ConfirmTest do
       assert conn.status == 403
     end
 
-    test "with previously reserved identity and matched credentials - returns success message", %{email: email, nickname: nickname} do
+    test "with previously reserved identity and matched credentials - returns success message", %{
+      email: email,
+      nickname: nickname
+    } do
       pid = User.reserve_identity(email, nickname) |> Result.from_ok()
-      %{cred: %Uptight.Base.Urlsafe{} = cred_id} = :sys.get_state(pid)
+      %{cred_id: %Uptight.Base.Urlsafe{} = cred_id} = User.get_state!(pid)
       secret = Credential.tip(cred_id) |> extract_secret()
 
       conn =
@@ -39,6 +42,7 @@ defmodule DoAuth.Web.ConfirmTest do
       assert conn.status == 200
     end
 
-    defp extract_secret(confirmation_cred), do: confirmation_cred |> Kernel.get_in(["credentialSubject", "secret"])
+    defp extract_secret(confirmation_cred),
+      do: confirmation_cred |> Kernel.get_in(["credentialSubject", "secret"])
   end
 end

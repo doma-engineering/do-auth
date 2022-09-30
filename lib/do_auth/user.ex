@@ -26,7 +26,7 @@ defmodule DoAuth.User do
   defdata do
     email :: T.t()
     nickname :: T.t()
-    cred :: U.t() | nil \\ nil
+    cred_id :: U.t() | nil \\ nil
   end
 
   @spec by_email!(T.t()) :: pid()
@@ -52,8 +52,8 @@ defmodule DoAuth.User do
 
   @spec cred_by_pid!(pid()) :: map()
   def cred_by_pid!(pid) do
-    %{cred: cred_id} = :sys.get_state(pid)
-    Credential.tip(cred_id)
+    %{cred_id: id} = get_state!(pid)
+    Credential.tip(id)
   end
 
   @spec start_link(list(T.t())) :: :ignore | {:error, any} | {:ok, pid}
@@ -79,12 +79,12 @@ defmodule DoAuth.User do
     {:ok, state0}
   end
 
-  @spec approve_confirmation!(T.t(), keyword()) :: __MODULE__.t()
+  @spec approve_confirmation!(T.t(), keyword()) :: :ok
   def approve_confirmation!(%T{} = email, opts \\ []) do
     state0 = get_state!(email)
-    confirmation_cred = state0.cred
-    cred1 = mk_approval_cred!(confirmation_cred, opts)
-    update_state!(email, %{state0 | cred: cred1})
+    confirmation_cred_id = state0.cred_id
+    cred1_id = mk_approval_cred!(confirmation_cred_id, opts)
+    update_state!(email, %{state0 | cred_id: cred1_id})
   end
 
   @spec reserve_identity(T.t(), T.t(), keyword(T.t())) :: Result.t()
@@ -121,7 +121,7 @@ defmodule DoAuth.User do
 
     GenServer.call(
       pid,
-      {:replace_state, %__MODULE__{email: email, nickname: nickname, cred: B.mk_url!(id)}}
+      {:replace_state, %__MODULE__{email: email, nickname: nickname, cred_id: B.mk_url!(id)}}
     )
 
     if !opts[:no_mail] do
@@ -132,7 +132,7 @@ defmodule DoAuth.User do
   @spec reservation_seconds() :: non_neg_integer()
   def reservation_seconds(), do: 15 * 60
 
-  defp mk_confirmation_cred!(%U{encoded: x}, email, nickname, homebase, opts) do
+  defp mk_confirmation_cred!(%U{encoded: secret}, email, nickname, homebase, opts) do
     kp = %{public: pk} = Crypto.server_keypair()
 
     kp
@@ -141,7 +141,7 @@ defmodule DoAuth.User do
         "email" => email,
         "nickname" => nickname,
         "kind" => "email confirmation",
-        "secret" => x,
+        "secret" => secret,
         "homebase" => homebase
       },
       amendingKeys: [B.safe!(pk).encoded],
@@ -150,13 +150,13 @@ defmodule DoAuth.User do
     |> Result.from_ok()
   end
 
-  @spec mk_approval_cred!(map(), keyword()) :: map()
-  def mk_approval_cred!(confirmation_cred, opts) do
-    cred = Credential.tip(confirmation_cred)
+  @spec mk_approval_cred!(U.t(), keyword()) :: U.t()
+  def mk_approval_cred!(confirmation_cred_id, opts) do
+    cred = Credential.tip(confirmation_cred_id)
 
     cget = fn x -> cred["credentialSubject"][x] end
 
-    res =
+    approval_cred =
       Crypto.server_keypair()
       |> Credential.transact_amend(
         %{
@@ -167,22 +167,27 @@ defmodule DoAuth.User do
         },
         cred
       )
+      |> Result.from_ok()
 
-    res |> Result.from_ok()
+    approval_cred["id"] |> B.mk_url!()
   end
 
   defp make_shared_secret() do
     Crypto.randombytes(8)
   end
 
-  @spec get_state!(T.t()) :: __MODULE__.t()
+  @spec get_state!(T.t() | pid()) :: __MODULE__.t()
   def get_state!(%T{} = email) do
     pid = by_email!(email)
     GenServer.call(pid, :get_state)
   end
 
+  def get_state!(pid) when is_pid(pid) do
+    GenServer.call(pid, :get_state)
+  end
+
   # Replace old state (state) with new state (state1)
-  @spec update_state!(T.t(), __MODULE__.t()) :: __MODULE__.t()
+  @spec update_state!(T.t(), __MODULE__.t()) :: :ok
   def update_state!(email, state1) do
     pid = by_email!(email)
     GenServer.cast(pid, {:update_state, state1})
@@ -200,9 +205,11 @@ defmodule DoAuth.User do
   @impl true
   @spec handle_call(:get_state, {pid, any}, __MODULE__.t()) ::
           {:reply, __MODULE__.t(), __MODULE__.t()}
-  def handle_call(:get_state, _from, state) do
+  def handle_call(:get_state, _from, state0) do
     # TODO: return latest version of credential with `tip`.
-    {:reply, state, state}
+    # last_cred_id = Credential.tip(state0.cred_id)
+    # state1 = %{state0 | cred_id: last_cred_id}
+    {:reply, state0, state0}
   end
 
   # Replace old state (state) with new state (state1), and return old state.
@@ -217,6 +224,9 @@ defmodule DoAuth.User do
   end
 
   # Silently replace old state (state) with new state (state1).
+  @impl true
+  @spec handle_cast({:update_state, any()}, __MODULE__.t()) ::
+          {:noreply, __MODULE__.t()}
   def handle_cast({:update_state, state1}, _state) do
     {:noreply, state1}
   end

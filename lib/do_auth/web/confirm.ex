@@ -12,8 +12,8 @@ defmodule DoAuth.Web.Confirm do
   alias DoAuth.User
   alias DoAuth.Credential
 
-  plug :confirm
-  plug :render_result
+  plug(:confirm)
+  plug(:render_result)
 
   @doc """
   Options:
@@ -34,7 +34,7 @@ defmodule DoAuth.Web.Confirm do
     case Result.new(fn ->
            %{"email" => email_raw, "token" => token_raw} = conn.query_params
            email = email_raw |> T.new!()
-           %User{email: _reg_email, cred: cred_id} = User.get_state!(email)
+           %User{email: _reg_email, cred_id: cred_id} = User.get_state!(email)
            cred = Credential.tip(cred_id)
 
            assert cget.(cred, "secret") == token_raw,
@@ -42,7 +42,7 @@ defmodule DoAuth.Web.Confirm do
 
            User.approve_confirmation!(email, opts)
          end) do
-        x -> assign_result(conn, x)
+      x -> assign_result(conn, x)
     end
   end
 
