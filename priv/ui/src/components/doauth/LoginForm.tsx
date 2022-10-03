@@ -4,6 +4,7 @@ import { objectToView } from '../../atoms/devHelpsComponents';
 import { keyPairSessionStorage } from '../../atoms/password';
 import { mkCredential } from '../../doauth/credential';
 import { Cannable, deriveSigningKeypair, mainKey } from '../../doauth/crypto';
+import FormInputLine from '../form/FormInputLine';
 
 function LoginForm() {
     const [, displayCredential] = useAtom(objectToView);
@@ -47,25 +48,25 @@ function LoginForm() {
     };
 
     return (
-        <form onSubmit={(ev) => onSubmit(ev)} className="plane flex flex-col">
-            <fieldset className="flex justify-between pb-3">
-                <label htmlFor="nickname" className="pr-2">
-                    Nickname:
-                </label>
-                <input id="nickname" type="text" required />
-            </fieldset>
-            <fieldset className="flex justify-between pb-3">
-                <label htmlFor="email" className="pr-2">
-                    Email:
-                </label>
-                <input id="email" type="email" required />
-            </fieldset>
-            <fieldset className="flex justify-between pb-3">
-                <label htmlFor="password" className="pr-2">
-                    Password:
-                </label>
-                <input id="password" type="password" required />
-            </fieldset>
+        <form
+            onSubmit={(ev) => onSubmit(ev)}
+            className="plane flex flex-col space-y-3"
+        >
+            <FormInputLine
+                name="nickname"
+                label="Nickname: "
+                inputProps={{ autoComplete: 'off', required: true }}
+            />
+            <FormInputLine
+                name="email"
+                label="Email: "
+                inputProps={{ type: 'email', required: false }}
+            />
+            <FormInputLine
+                name="password"
+                label="Password: "
+                inputProps={{ type: 'password', required: false }}
+            />
             <div className="flex justify-end">
                 <button type="submit" className="button-primary">
                     submit

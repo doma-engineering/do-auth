@@ -42,13 +42,17 @@ defmodule DoAuth.Web do
   @spec default_opts :: keyword(T.t() | list(T.t()))
   def default_opts() do
     [
+      scheme:
+        Application.get_env(:do_auth, __MODULE__)
+        |> Keyword.get(:front_scheme, "http")
+        |> T.new!(),
       homebase:
         Application.get_env(:do_auth, __MODULE__)
         |> Keyword.get(:front_host, "localhost")
         |> T.new!(),
       port:
         Application.get_env(:do_auth, __MODULE__)
-        |> Keyword.get(:front_port, 3001)
+        |> Keyword.get(:front_port, 3000)
         |> to_string()
         |> T.new!(),
       front_name:

@@ -1,24 +1,37 @@
-import { useAtom } from 'jotai';
 import { ChangeEvent, FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { makeKeypairAndSaveToSessionStorage } from '../../atoms/password';
+import { UserRegData } from '../../pages/Register';
 import FormInputLine from '../form/FormInputLine';
 
-export default function RegisterForm({ name }: { name: string }) {
+export default function RegisterForm({
+    onComplete,
+    defaultValue,
+}: {
+    onComplete?: (user: UserRegData) => void;
+    defaultValue?: UserRegData;
+}) {
     const navigate = useNavigate();
-    const [, saveKeyPair] = useAtom(makeKeypairAndSaveToSessionStorage);
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(defaultValue?.password ?? '');
 
     const onSubmit = async (event: FormEvent) => {
         event.preventDefault(); // Disable page reload
-        const [nickname, email, password] = getInputValues(
-            event.target as HTMLFormElement,
-            name,
-            ['nickname', 'email', 'password']
-        );
-        saveKeyPair({ password, email }); // Save password as key pair to Session Storage
-        makeSubmit(email, nickname);
-        navigate('/waiting');
+
+        const { nickname, email, password } =
+            event.target as typeof event.target & {
+                nickname: { value: string };
+                email: { value: string };
+                password: { value: string };
+            };
+
+        makeSubmit(email.value, nickname.value);
+
+        typeof onComplete === 'function'
+            ? onComplete({
+                  email: email.value,
+                  nickname: nickname.value,
+                  password: password.value,
+              })
+            : navigate('/waiting');
     };
 
     return (
@@ -26,7 +39,7 @@ export default function RegisterForm({ name }: { name: string }) {
             <h1 className="text-xl text-center mb-5">Registration form</h1>
             <fieldset className="fieldset-lines-bt">
                 <FormInputLine
-                    name={`${name}:nickname`}
+                    name="nickname"
                     label="Nickname:"
                     errorMessage={bellowInput([
                         'Please enter valid nickname;',
@@ -36,43 +49,45 @@ export default function RegisterForm({ name }: { name: string }) {
                         type: 'text',
                         className: 'w-[210px]',
                         placeholder: 'John Doe',
+                        defaultValue: defaultValue?.nickname,
+                        autoComplete: 'off',
                         pattern: '^[a-zA-Z\\s_\\-0-9]{1,50}$',
                         required: true,
                     }}
                 />
                 <FormInputLine
-                    name={`${name}:email`}
+                    name="email"
                     label="Email:"
                     errorMessage={bellowInput('Please enter valid email.')}
                     inputProps={{
                         type: 'email',
                         className: 'w-[210px]',
                         placeholder: 'example@example.com',
-                        pattern:
-                            '^[a-zA-Z0-9+_.-]+@[a-zA-Z0-9.-]+.[a-zA-z]{2,3}$',
+                        defaultValue: defaultValue?.email,
                         required: true,
                     }}
                 />
             </fieldset>
             <fieldset className="fieldset-lines-b">
                 <FormInputLine
-                    name={`${name}:password`}
+                    name="password"
                     label="Password:"
                     errorMessage={bellowInput(
-                        'Password must be at least 8 digits.'
+                        'Password must be at least 3 digits.'
                     )}
                     inputProps={{
                         type: 'password',
                         className: 'w-[210px]',
                         placeholder: '••••••••',
-                        pattern: '^.{8,}$',
+                        defaultValue: defaultValue?.password,
+                        pattern: '^.{3,}$',
                         onChange: (e: ChangeEvent<HTMLInputElement>) =>
                             setPassword(e.target.value),
                         required: true,
                     }}
                 />
                 <FormInputLine
-                    name={`${name}:passwordConfirm`}
+                    name="passwordConfirm"
                     label="Confirm password:"
                     errorMessage={bellowInput("Password don't match.")}
                     inputProps={{
@@ -116,20 +131,6 @@ const bellowInput = (text: string | string[]) => (
         )}
     </div>
 );
-
-// inputs name's should be  "${formName}:${fieldName}"
-// formName - is metaphoric, more often formName is higher component name, need for make uniq names for the components duplicate.
-const getInputValues = (
-    form: HTMLFormElement,
-    formName: string,
-    fields: string[]
-) =>
-    fields
-        .map((fieldName) => `${formName}:${fieldName}`)
-        .map(
-            (elementName) =>
-                (form.elements.namedItem(elementName) as HTMLInputElement).value
-        );
 
 // Call mail reserve endpoint, that should send confirmation mail on email.
 const makeSubmit = async (email: string, nickname: string) => {

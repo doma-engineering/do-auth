@@ -22,11 +22,12 @@ function FormInputLine({
             const regex = new RegExp(inputProps.pattern);
             setInvalid(!regex.test(inputElement.value));
         } else {
-            setInvalid(inputElement.value.length > 0);
+            if (inputProps?.required)
+                setInvalid(inputElement.value.length === 0);
         }
     };
 
-    // Make user onBlur maybe.
+    // Make input props onBlur maybe.
     // Set touched.
     // Validates value.
     const handleOnBlur = (e: FocusEvent<HTMLInputElement, Element>) => {
@@ -39,7 +40,7 @@ function FormInputLine({
         handleCheckInvalid(e.currentTarget);
     };
 
-    // Make user onChange maybe.
+    // Make input props onChange maybe.
     // Validates value.
     const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
         if (
