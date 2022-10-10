@@ -20,8 +20,11 @@ defmodule DoAuth.Web do
   def init(_) do
     do_auth_port = Application.get_env(:do_auth, __MODULE__) |> Keyword.get(:port, 8110)
 
+    do_auth_ip =
+      Application.get_env(:do_auth, __MODULE__) |> Keyword.get(:ip_tuple, {127, 0, 0, 1})
+
     children = [
-      {Plug.Cowboy, scheme: :http, plug: DoAuth.Router, port: do_auth_port}
+      {Plug.Cowboy, scheme: :http, plug: DoAuth.Router, port: do_auth_port, ip: do_auth_ip}
     ]
 
     opts = [strategy: :one_for_one]
@@ -52,7 +55,7 @@ defmodule DoAuth.Web do
         |> T.new!(),
       port:
         Application.get_env(:do_auth, __MODULE__)
-        |> Keyword.get(:front_port, 3000)
+        |> Keyword.get(:port, 3000)
         |> to_string()
         |> T.new!(),
       front_name:

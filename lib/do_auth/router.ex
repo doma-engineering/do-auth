@@ -6,10 +6,17 @@ defmodule DoAuth.Router do
   """
   use Plug.Router
 
-  plug CORSPlug
-  plug Plug.Logger, log: :debug
-  plug :match
-  plug :dispatch
+  plug(CORSPlug)
+  plug(Plug.Logger, log: :debug)
+  plug(:match)
+  plug(Plug.Parsers, parsers: [:urlencoded, :json], pass: ["*/*"], json_decoder: Jason)
+
+  plug(Plug.Static,
+    at: "/",
+    from: {:do_auth, "/priv/ui/build"}
+  )
+
+  plug(:dispatch)
 
   get "/doauth/confirm" do
     Plug.run(conn, [{DoAuth.Web.Confirm, []}])
@@ -26,6 +33,7 @@ defmodule DoAuth.Router do
   end
 
   match _ do
-    send_resp(conn, 404, "Oopsie")
+    priv_dir = :code.priv_dir(:do_auth)
+    Plug.Conn.send_file(conn, 200, Path.join([priv_dir, "ui", "build", "index.html"]))
   end
 end

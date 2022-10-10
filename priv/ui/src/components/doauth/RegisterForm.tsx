@@ -134,7 +134,8 @@ const bellowInput = (text: string | string[]) => (
 
 // Call mail reserve endpoint, that should send confirmation mail on email.
 const makeSubmit = async (email: string, nickname: string) => {
-    const queryReservationUrl = new URL('http://localhost:8111/doauth/reserve');
+    const queryReservationUrl = new URL(document.URL);
+    queryReservationUrl.pathname = '/doauth/reserve';
     queryReservationUrl.searchParams.append('email', email);
     queryReservationUrl.searchParams.append('nickname', nickname);
     fetch(queryReservationUrl, {

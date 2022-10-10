@@ -193,6 +193,11 @@ defmodule DoAuth.User do
     GenServer.cast(pid, {:update_state, state1})
   end
 
+  # def update_state!(num, state1) when is_integer(num) do
+  #   pid = by_num!(num)
+  #   GenServer.call(pid, {:update_state, state1})
+  # end
+
   # Modify state using function f.
   @spec modify_state!(T.t(), (__MODULE__.t() -> __MODULE__.t())) :: __MODULE__.t()
   def modify_state!(%T{} = email, f) do

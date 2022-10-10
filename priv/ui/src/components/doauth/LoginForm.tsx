@@ -35,7 +35,7 @@ function LoginForm() {
         saveKeyPair(keyPair);
 
         // Make submit
-        await fetch('http://localhost:8111/echo', {
+        await fetch('/echo', {
             method: 'POST',
             body: JSON.stringify(credential),
         })
@@ -60,16 +60,16 @@ function LoginForm() {
             <FormInputLine
                 name="email"
                 label="Email: "
-                inputProps={{ type: 'email', required: false }}
+                inputProps={{ type: 'email', required: true }}
             />
             <FormInputLine
                 name="password"
                 label="Password: "
-                inputProps={{ type: 'password', required: false }}
+                inputProps={{ type: 'password', required: true }}
             />
             <div className="flex justify-end">
-                <button type="submit" className="button-primary">
-                    submit
+                <button type="submit" className="button-primary px-5">
+                    Enter
                 </button>
             </div>
         </form>

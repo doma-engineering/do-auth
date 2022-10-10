@@ -2,8 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import NavigationBar from './components/navigation/NavigationBar';
 import ConfirmationPage from './pages/Confirm';
 import LoginPage from './pages/Login';
-import MailWaitingPage from './pages/MailWaiting';
-import RegisterPage from './pages/Register';
+import RegisterPage, { MailWaitingPage } from './pages/Register';
 
 function Router() {
     return (

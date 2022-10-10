@@ -1,6 +1,15 @@
+import { useAtom } from 'jotai';
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import JsonView from '../components/devHelps/JsonView';
+import { objectToView } from '../atoms/devHelpsComponents';
 import LoginForm from '../components/doauth/LoginForm';
+
+enum ErrorType {
+    TermOut,
+    WrongEmailOrToken,
+    MissingEmailOrToken,
+}
 
 export default function ConfirmationPage() {
     const [searchParams] = useSearchParams();
@@ -8,6 +17,8 @@ export default function ConfirmationPage() {
     const [approved, setApproved] = useState(false);
     const [isInprogress, setInprogress] = useState(true);
 
+    const [errorType, setErrorType] = useState<null | ErrorType>(null);
+    const [, setError] = useAtom(objectToView);
     const [parameters, setParameters] = useState({ email: '', token: '' });
 
     useEffect(() => {
@@ -20,49 +31,53 @@ export default function ConfirmationPage() {
             setParameters({ email, token });
 
             // make url for backend submit
-            const queryReservationUrl = new URL(
-                'http://localhost:8111/doauth/confirm'
-            );
-            queryReservationUrl.searchParams.append('email', email);
-            queryReservationUrl.searchParams.append('token', token);
+
+            const queryConfirmUrl = new URL(document.URL);
+            queryConfirmUrl.pathname = '/doauth/confirm';
+            queryConfirmUrl.searchParams.append('email', email);
+            queryConfirmUrl.searchParams.append('token', token);
 
             // make submit
-            fetch(queryReservationUrl, {
+            fetch(queryConfirmUrl, {
                 method: 'GET',
             }).then((response) => {
                 setInprogress(false);
                 if (response.ok) {
                     setApproved(() => true);
                 } else {
-                    setApproved((prev) => prev || false); // That bad, but second etc submit will got fail, so need make resistance
+                    setApproved(() => false);
+                    if (response.status === 404) {
+                        setErrorType(ErrorType.TermOut);
+                    } else {
+                        setErrorType(ErrorType.WrongEmailOrToken);
+                        response.json().then((data) => {
+                            setError(data);
+                        });
+                    }
                 }
             });
         } else {
             setInprogress(false);
+            setErrorType(ErrorType.MissingEmailOrToken);
+            setParameters({ email: email ?? '', token: token ?? '' });
         }
     }, [searchParams]);
 
     return (
         <>
-            <div className="mt-16 mb-40">
-                <Dev
-                    email={parameters.email}
-                    token={parameters.token}
-                    isInprogress={isInprogress}
-                    approved={approved}
-                />
-            </div>
-            <div className="w-9/12 border-t-2 border-slate-400 my-3 h-screen mb-10 flex flex-col items-center">
-                <div className="h-1/4" />
+            {isInprogress ? (
+                <Loading />
+            ) : approved ? (
                 <Success />
-            </div>
-
-            <div className="w-9/12 border-t-2 border-slate-400 my-3 h-screen flex flex-col items-center">
-                <div className="h-1/4" />
-                <Fail email={parameters.email} />
-            </div>
+            ) : (
+                <Fail errorType={errorType} parameters={parameters} />
+            )}
         </>
     );
+}
+
+function Loading() {
+    return <div>Loading...</div>;
 }
 
 function Success() {
@@ -70,100 +85,108 @@ function Success() {
         <div className="mt-14 mb-10 flex flex-col items-center">
             <h1 className="text-2xl pb-6">Your E-mail was approved!</h1>
             <div className="flex">
-                <div className=" text-2xl mx-4 flex flex-col items-end">
-                    <p className="text-violet-500">Enter</p>
-                    <p className="text-yellow-300">
-                        <span className="text-violet-500">to</span> DoAuth
-                    </p>
-                    <p className="italic">now</p>
-                </div>
                 <LoginForm />
             </div>
         </div>
     );
 }
 
-function Fail({ email }: { email: string }) {
+function Fail({
+    errorType,
+    parameters,
+}: {
+    errorType: ErrorType | null;
+    parameters: { email: string; token: string };
+}) {
+    switch (errorType) {
+        case ErrorType.TermOut:
+            return <TermOut parameters={parameters} />;
+        case ErrorType.WrongEmailOrToken:
+            return <WrongEmailOrToken />;
+        case ErrorType.MissingEmailOrToken:
+            return <MissingEmailOrToken />;
+    }
+    return <></>;
+}
+
+function TermOut({
+    parameters,
+}: {
+    parameters: { email: string; token: string };
+}) {
     return (
         <>
-            <div className="mt-8 text-2xl">Email confirmation term is out!</div>
+            <div className="mt-14 text-2xl">
+                Email confirmation term is out!
+            </div>
             <div className="text-lg my-4 text-slate-300 border px-4 py-2">
-                {email}
+                {parameters.email}
             </div>
 
-            <button className="button-primary">Resend mail</button>
+            <button className="button-primary" disabled>
+                Resend mail
+            </button>
         </>
     );
 }
 
-function Dev({
-    email,
-    token,
-    isInprogress,
-    approved,
-}: {
-    email: string;
-    token: string;
-    isInprogress: boolean;
-    approved: boolean;
-}) {
+function WrongEmailOrToken() {
     return (
-        <div className="flex flex-col items-center">
-            <div className="plane text-lg space-y-1 w-96 mb-10">
-                <div className="flex justify-center overflow-hidden">
-                    <div className="w-44 pr-1 text-right">Your email: </div>
-                    <div className="w-44 pl-1 text-left text-green-500 font-bold">
-                        {formatEmail(email)}
-                    </div>
-                </div>
-                <div className="flex justify-center">
-                    <div className="w-44 pr-1 text-right">Your token: </div>
-                    <div className="w-44 pl-1 text-left text-green-500 font-bold">
-                        {token}
-                    </div>
-                </div>
-                <div className="flex justify-center">
-                    <div className="w-44 pr-1 text-right">Verification: </div>
-                    <div className="w-44 pl-1 text-left text-green-500 font-bold">
-                        {displayStage(isInprogress, approved)}
+        <>
+            <div className="mt-14 text-2xl mb-4 text-left">
+                <p className="text-center">Used wrong Email or token!</p>
+                <MoreDetail />
+                <div className="plane mt-10 text-base">
+                    <p className="">For solve this you can try:</p>
+                    <ul className="list-decimal">
+                        <li className="pl-2 ml-5">
+                            use button from accepting mail again,
+                        </li>
+                        <li className="pl-2 ml-5">
+                            try get other token by E-mail,
+                        </li>
+                        <li className="pl-2 ml-5">
+                            or register with other E-mail.
+                        </li>
+                    </ul>
+                    <div className="flex justify-center space-x-3 text-sm mt-3">
+                        <button className="button-primary" disabled>
+                            Get new Token
+                        </button>
+                        <a href="/register" className="button-primary">
+                            Go to Registry
+                        </a>
                     </div>
                 </div>
             </div>
-            {approved ? (
-                <>
-                    <Link
-                        className="button-primary mt-3 block w-96 text-center"
-                        to={'/login'}
-                    >
-                        Login
-                    </Link>
-                </>
-            ) : null}
-            <p className="pt-3 text-center">
-                <span className="font-bold text-error">[DEV]</span> There should
-                be different page, but that you can see details!
-            </p>
-            <p>
-                Future should stay message: "All good, you can entry" or display
-                error{' '}
-            </p>
-            <p className="pt-2">
-                <span className="font-bold text-error">[DEV]</span> Fragments
-                below don't works, and now can't do that.
-            </p>
-        </div>
+        </>
     );
 }
 
-// ------------------ Helps functions --------------------
-
-function displayStage(inprogress: boolean, approved: boolean) {
-    if (inprogress)
-        return <div className="text-violet-500 font-bold">in progress</div>;
-    if (approved)
-        return <div className="text-green-500 font-bold">complete</div>;
-    return <div className="text-red-500 font-bold">failed</div>;
+function MissingEmailOrToken() {
+    return (
+        <p className="mt-14 text-center text-2xl">
+            In confirmation link missed token or e-mail.
+        </p>
+    );
 }
 
-const formatEmail = (email: string) =>
-    email.length > 14 ? `${email.slice(0, 14)}...` : email;
+function MoreDetail() {
+    const [details, setDetails] = useState(false);
+    const handleDetailsClick = () => setDetails((prev) => !prev);
+    return (
+        <>
+            <div className="text-base flex justify-center">
+                <button
+                    className="button-secondary mt-4"
+                    onClick={handleDetailsClick}
+                >
+                    {details ? 'hide details' : 'see details'}
+                </button>
+            </div>
+            {details ? (
+                <JsonView className="text-base w-96 mt-2" header="Problem:" />
+            ) : null}
+        </>
+    );
+}

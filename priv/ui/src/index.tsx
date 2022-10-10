@@ -4,7 +4,7 @@ import './index.css';
 
 //import reportWebVitals from './reportWebVitals';
 
-import('./' + process.env.REACT_APP_ENTRY!).then((App) => {
+import('./' + (process.env.REACT_APP_ENTRY ?? 'Router.tsx')).then((App) => {
     const APP_DEFAULT = App.default;
     const container = document.getElementById('root');
     const root = createRoot(container!);
