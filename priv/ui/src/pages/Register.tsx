@@ -13,7 +13,6 @@ export default function RegisterPage() {
     });
 
     const onCompleteForm = useCallback((user?: UserRegData) => {
-        console.log(user);
         if (user !== undefined) setUserData(user!);
         setCompleteRegForm(true);
     }, []);

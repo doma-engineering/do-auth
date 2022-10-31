@@ -18,7 +18,8 @@ defmodule DoAuth.Otp.UserOfa do
 
   defp primary_children() do
     [
-      DoAuth.Otp.UserReg,
+      DoAuth.Otp.UserEmail,
+      DoAuth.Otp.UserPublickey,
       DoAuth.Otp.UserSup
     ]
   end

@@ -27,11 +27,19 @@ defmodule DoAuth.Web.Reserve do
       end
 
     case Result.new(fn ->
-           %{"email" => email_raw, "nickname" => nickname_raw} = conn.query_params
+           %{"email" => email_raw, "nickname" => nickname_raw, "user" => publickey_raw} = conn.query_params
            email = email_raw |> T.new!()
            nickname = nickname_raw |> T.new!()
+           publickey = publickey_raw |> Uptight.Base.mk_url!()
            opts = DoAuth.Web.default_opts()
            _pid = User.reserve_identity(email, nickname, opts) |> Result.from_ok()
+           User.append_publickey(email, publickey)
+           require Logger
+           Logger.warn("apended key")
+           Logger.warn(email)
+           Logger.warn(publickey)
+           pid = User.by_publickey!(publickey)
+           Logger.warn(:sys.get_state(pid))
          end) do
       %Result.Ok{} ->
         send_resp(conn, 200, "User successful reserved")

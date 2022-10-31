@@ -61,7 +61,7 @@ export default function ConfirmationPage() {
             setErrorType(ErrorType.MissingEmailOrToken);
             setParameters({ email: email ?? '', token: token ?? '' });
         }
-    }, [searchParams]);
+    }, [searchParams, setError]);
 
     return (
         <>

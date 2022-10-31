@@ -6,7 +6,8 @@ defmodule DoAuth.User do
 
   use GenServer, restart: :transient
 
-  alias DoAuth.Otp.UserReg, as: Reg
+  alias DoAuth.Otp.UserEmail, as: Reg
+  alias DoAuth.Otp.UserPublickey, as: Publickey
   alias Uptight.Text, as: T
   alias Uptight.Base.Urlsafe, as: U
   alias Uptight.Base, as: B
@@ -50,6 +51,20 @@ defmodule DoAuth.User do
     end)
   end
 
+  @spec by_publickey!(Uptight.Base.Urlsafe.t()) :: pid()
+  def by_publickey!(%U{encoded: key} = _publickey) do
+    [{_, pid}] = Registry.lookup(Publickey, key)
+
+    pid
+  end
+
+  @spec by_publickey(Uptight.Base.Urlsafe.t()) :: Result.t()
+  def by_publickey(%U{} = key) do
+    Result.new(fn ->
+      by_publickey!(key)
+    end)
+  end
+
   @spec cred_by_pid!(pid()) :: map()
   def cred_by_pid!(pid) do
     %{cred_id: id} = get_state!(pid)
@@ -85,6 +100,14 @@ defmodule DoAuth.User do
     confirmation_cred_id = state0.cred_id
     cred1_id = mk_approval_cred!(confirmation_cred_id, opts)
     update_state!(email, %{state0 | cred_id: cred1_id})
+  end
+
+  @spec append_publickey(T.t(), U.t()) :: atom()
+  def append_publickey(email, %U{encoded: key} = _publickey) do
+    pid = by_email!(email)
+    {result, _} = Registry.register(Publickey, key, pid)
+
+    result
   end
 
   @spec reserve_identity(T.t(), T.t(), keyword(T.t())) :: Result.t()
@@ -176,6 +199,8 @@ defmodule DoAuth.User do
     Crypto.randombytes(8)
   end
 
+  #ToDo: make get_state, update... with public key
+
   @spec get_state!(T.t() | pid()) :: __MODULE__.t()
   def get_state!(%T{} = email) do
     pid = by_email!(email)
@@ -188,7 +213,7 @@ defmodule DoAuth.User do
 
   # Replace old state (state) with new state (state1)
   @spec update_state!(T.t(), __MODULE__.t()) :: :ok
-  def update_state!(email, state1) do
+  def update_state!(%T{} = email, state1) do
     pid = by_email!(email)
     GenServer.cast(pid, {:update_state, state1})
   end

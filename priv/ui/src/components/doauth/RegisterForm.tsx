@@ -1,5 +1,7 @@
 import { ChangeEvent, FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { deriveSigningKeypair, mainKey } from '../../doauth/crypto';
+import { toUrl } from './../../doauth/base';
 import { UserRegData } from '../../pages/Register';
 import FormInputLine from '../form/FormInputLine';
 
@@ -23,7 +25,13 @@ export default function RegisterForm({
                 password: { value: string };
             };
 
-        makeSubmit(email.value, nickname.value);
+        
+        const mainKeyValue = await mainKey(password.value, {
+            saltOverride: email.value.toLowerCase(),
+        });
+        const keyPair = await deriveSigningKeypair(mainKeyValue, 1);
+        const publicKey = (await toUrl(keyPair.public)).encoded;
+        makeSubmit(email.value, nickname.value, publicKey);
 
         typeof onComplete === 'function'
             ? onComplete({
@@ -133,11 +141,13 @@ const bellowInput = (text: string | string[]) => (
 );
 
 // Call mail reserve endpoint, that should send confirmation mail on email.
-const makeSubmit = async (email: string, nickname: string) => {
+const makeSubmit = async (email: string, nickname: string, publicKey: string) => {
     const queryReservationUrl = new URL(document.URL);
     queryReservationUrl.pathname = '/doauth/reserve';
     queryReservationUrl.searchParams.append('email', email);
     queryReservationUrl.searchParams.append('nickname', nickname);
+    queryReservationUrl.searchParams.append('user', publicKey);
+    console.log(queryReservationUrl);
     fetch(queryReservationUrl, {
         method: 'GET',
     });

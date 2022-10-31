@@ -18,6 +18,13 @@ defmodule DoAuth.Router do
 
   plug(:dispatch)
 
+  post "/doauth/login" do
+    Plug.run(conn, [
+      {DoAuth.Web.Confirmed, []},
+      {DoAuth.Web.Login, []}
+    ])
+  end
+
   get "/doauth/confirm" do
     Plug.run(conn, [{DoAuth.Web.Confirm, []}])
   end

@@ -34,17 +34,32 @@ function LoginForm() {
         const credential = await mkCredential(keyPair, payload);
         saveKeyPair(keyPair);
 
-        // Make submit
-        await fetch('/echo', {
+        
+
+        await fetch('/doauth/login', {
             method: 'POST',
-            body: JSON.stringify(credential),
+            body: JSON.stringify(credential)
         })
             .then((response) => response.json())
             .then((data) => {
-                const body = JSON.parse(data.body);
-                displayCredential(body);
-                console.log(data);
+                console.log("===========================")
+                console.log(data)
+                console.log(keyPair.public)
+                displayCredential({data})
+                console.log("===========================")
             });
+
+        // Make submit
+        // await fetch('/echo', {
+        //     method: 'POST',
+        //     body: JSON.stringify(credential),
+        // })
+        //     .then((response) => response.json())
+        //     .then((data) => {
+        //         const body = JSON.parse(data.body);
+        //         displayCredential(body);
+        //         console.log(data);
+        //     });
     };
 
     return (
