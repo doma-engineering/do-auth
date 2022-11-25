@@ -4,7 +4,7 @@ defmodule DoAuth.MixProject do
   def project do
     [
       app: :do_auth,
-      version: "0.5.2-pre",
+      version: "0.5.3-pre",
       description:
         "Fast, lean and reliable authentication server based on verifiable credentials standard",
       elixir: "~> 1.13",
@@ -50,9 +50,9 @@ defmodule DoAuth.MixProject do
       {:uptight, "~> 0.2.6-rc"},
       {:persist, "~> 0.2.0-rc"},
       {:doma, "~> 1.0.0"},
-      {:doma_witchcraft, "~> 1.0.4-doma"},
-      {:doma_algae, "~> 1.3.1-doma"},
-      {:doma_quark, "~> 2.3.2-doma2"},
+      {:doma_witchcraft, "~> 1.0.6-doma"},
+      {:doma_algae, "~> 1.3.2-doma"},
+      {:doma_quark, "~> 2.3.3-doma"},
       {:plug_cowboy, "~> 2.0"},
       {:bamboo_smtp, "~> 4.1"}
     ]
