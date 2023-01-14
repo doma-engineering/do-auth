@@ -1,6 +1,10 @@
 defmodule DoAuth.Invite do
   @moduledoc """
   Invite management server.
+  We're providing a Clubhouse-like invite system, where you can invite just two people.
+  The feeling of exclusivity is an important trick that's a useful social engineering primitive for startups.
+
+  Jokes aside, we've made this system first because it's the simplest non-trivial sign-up system we could think of.
   """
   use GenServer
 
@@ -76,7 +80,7 @@ defmodule DoAuth.Invite do
   @spec mk_invites(B.Urlsafe.t(), pos_integer(), keyword()) :: map()
   def mk_invites(pk, capacity \\ @default_invites, opts \\ []) do
     Credential.mk_credential!(
-      Crypto.binary_server_keypair(),
+      Crypto.server_keypair(),
       %{
         "kind" => "invite",
         "holder" => pk.encoded,
@@ -115,7 +119,7 @@ defmodule DoAuth.Invite do
     Result.new(fn ->
       invite = get_root_invite()
       assert is_invite_vacant(invite), "Invite must not be already fulfilled."
-      is_valid = Crypto.verify_map(invite)
+      is_valid = Crypto.verify_map(invite) |> IO.inspect
       assert Result.is_ok?(is_valid), "Invite must be a valid credential."
 
       r_m(

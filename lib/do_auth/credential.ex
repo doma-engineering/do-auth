@@ -224,9 +224,9 @@ defmodule DoAuth.Credential do
     present_credential_map(kp, credential_map, opts) |> Result.from_ok()
   end
 
-  @spec hash_map!(Crypto.canonicalisable_value()) :: String.t()
+  @spec hash_map!(Crypto.canonicalisable_value()) :: B.Urlsafe.t()
   def hash_map!(cred) do
-    Crypto.canonicalise_term!(cred) |> Jason.encode!() |> Crypto.bland_hash()
+    Crypto.canonicalise_term!(cred) |> Jason.encode!() |> Crypto.hash()
   end
 
   @spec hash_map(Crypto.canonicalisable_value()) :: Result.t()
@@ -285,7 +285,7 @@ defmodule DoAuth.Credential do
       )
       when mk_or_present_cred == :mk_credential or mk_or_present_cred == :present_credential do
     fetch_cred_maybe = fn ->
-      payload_hash = hash_map!(payload_map)
+      payload_hash = hash_map!(payload_map).encoded
 
       existing = Map.get(ps, payload_hash)
 

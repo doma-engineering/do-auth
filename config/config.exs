@@ -18,6 +18,10 @@ if Mix.env() == :test, do: import_config("test.exs")
 
 secret_cfg = "#{Mix.env()}.secret.exs"
 
+if Mix.env() == :test do
+  import_config "test.secret.exs.example"
+end
+
 if File.exists?("./config/" <> secret_cfg) do
   import_config secret_cfg
 end

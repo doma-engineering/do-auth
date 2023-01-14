@@ -7,12 +7,15 @@ defmodule DoAuth.Crypto do
   alias Uptight.Text, as: T
   alias Uptight.Base, as: B
   alias Uptight.Binary
+  alias Uptight.Result
   import Uptight.Assertions
   require Uptight.Assertions
 
   alias :enacl, as: C
 
   import Witchcraft.Functor
+
+  import DynHacks
 
   ########################################
   ####             Types!             ####
@@ -46,7 +49,7 @@ defmodule DoAuth.Crypto do
   Hash size, analogous to salt size.
   """
   @type hash_size :: pos_integer()
-  # @hash_size 32
+  @hash_size 32
   @type hash :: Binary.t()
 
   @typedoc """
@@ -106,8 +109,29 @@ defmodule DoAuth.Crypto do
 
   @typedoc """
   Detached signature along with the public key needed to validate, represented as Urlsafe Base64.
+  It's ok to use this non-fundamental representation, because it's very common to use Base64 to represent signatures and public keys in the wild.
   """
   @type detached_sig_b64 :: %{public: B.Urlsafe.t(), signature: B.Urlsafe.t()}
+
+  @typedoc """
+  Only accept atoms as keys of canonicalisable entities.
+  """
+  @type canonicalisable_key :: atom()
+
+  @typedoc """
+  Only accept atoms, strings and numbers as values of canonocalisable entities.
+  """
+  @type canonicalisable_value ::
+          atom()
+          | B.t()
+          | T.t()
+          | number()
+          | DateTime.t()
+          | list(canonicalisable_value())
+          | %{canonicalisable_key() => canonicalisable_value()}
+
+  @type canonicalised_value ::
+          B.t() | T.t() | number() | list(list(T.t() | canonicalised_value()))
 
   ########################################
   ####  Pure cryptographic functions  ####
@@ -119,8 +143,8 @@ defmodule DoAuth.Crypto do
 
   # Example
 
-  iex> alias OnTheMap.Crypto, as: OC
-  OnTheMap.Crypto
+  iex> alias DoAuth.Crypto, as: OC
+  DoAuth.Crypto
   iex> OC.main_key_less_secure("password" |> Uptight.Text.new!(), OC.test_params_please_ignore())
   %Uptight.Binary{
     binary: <<42, 107, 111, 184, 100, 238, 62, 33, 105, 15, 89, 137, 77, 197, 23, 3, 39, 216,
@@ -144,12 +168,12 @@ defmodule DoAuth.Crypto do
   @doc """
   Generate a signing keypair from a password.
 
-  # Example
+  # Examples:
 
   iex> alias Uptight.Text, as: T
   Uptight.Text
-  iex> alias OnTheMap.Crypto, as: OC
-  OnTheMap.Crypto
+  iex> alias DoAuth.Crypto, as: OC
+  DoAuth.Crypto
   iex> keypair = OC.keypair_from_password("password" |> T.new!(), OC.test_params_please_ignore())
   %{
     public: %Uptight.Binary{
@@ -272,6 +296,7 @@ defmodule DoAuth.Crypto do
 
   @doc """
   Verify a detached signature.
+  We both support Binary and Base.Urlsafe as input.
 
   # Example
 
@@ -279,8 +304,8 @@ defmodule DoAuth.Crypto do
   Witchcraft.Functor
   iex> alias Uptight.Text, as: T
   Uptight.Text
-  iex> alias OnTheMap.Crypto, as: OC
-  OnTheMap.Crypto
+  iex> alias DoAuth.Crypto, as: OC
+  DoAuth.Crypto
   iex> keypair = OC.keypair_from_password("password" |> T.new!(), OC.test_params_please_ignore())
   %{
     public: %Uptight.Binary{
@@ -361,21 +386,21 @@ defmodule DoAuth.Crypto do
 
   ## Examples
 
-  iex> OnTheMap.Crypto.valid_pk?("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v=")
+  iex> DoAuth.Crypto.valid_pk?("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v=")
   true
 
-  iex> OnTheMap.Crypto.valid_pk?("Wpu60Ur4nxrpKWdBBnxacjKbKAWqRR9TDYZoFJ2a3KI=")
+  iex> DoAuth.Crypto.valid_pk?("Wpu60Ur4nxrpKWdBBnxacjKbKAWqRR9TDYZoFJ2a3KI=")
   true
 
   This one returns false, because the public key is not a valid urlencoded base64 string.
-  iex> OnTheMap.Crypto.valid_pk?("/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v")
+  iex> DoAuth.Crypto.valid_pk?("/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v")
   false
 
   Same for this one. The padding is incorrect here.
-  iex> OnTheMap.Crypto.valid_pk?("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u===")
+  iex> DoAuth.Crypto.valid_pk?("a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u===")
 
   This one returns false, because the public key is not 44 characters long.
-  iex> OnTheMap.Crypto.valid_pk?("this0string1s0length0is0forty0three0chars==")
+  iex> DoAuth.Crypto.valid_pk?("this0string1s0length0is0forty0three0chars==")
   false
   """
   @spec valid_pk?(String.t()) :: boolean
@@ -396,9 +421,9 @@ defmodule DoAuth.Crypto do
   If the string is shorter than the given length, it is padded with spaces.
 
   Example:
-  iex> OnTheMap.Crypto.pad_raw("hello", 10)
+  iex> DoAuth.Crypto.pad_raw("hello", 10)
   "hello     "
-  iex> OnTheMap.Crypto.pad_raw("hello", 3)
+  iex> DoAuth.Crypto.pad_raw("hello", 3)
   "hel"
   """
   @spec pad_raw(binary, non_neg_integer) :: binary
@@ -481,4 +506,344 @@ defmodule DoAuth.Crypto do
   # Otherwise, crash.
   defp tighten_keypair(kp = %{public: %Binary{} = _pk, secret: %Binary{} = _sk}), do: kp
   defp tighten_keypair(kp), do: kp |> map(&Binary.new!/1)
+
+  defp verify_raw(msg, %{public: <<pk::binary>>, signature: <<sig::binary>>}) do
+    C.sign_verify_detached(
+      sig |> raw_base2raw_binary(),
+      msg |> unwrap_message(),
+      pk |> raw_base2raw_binary()
+    )
+  end
+
+  @doc """
+  Verifies a map that has a proof embedded into it by converting said object into a map, deleting embedding, canonicalising the result and verifying the result against the embedding.
+  This function is configurable via options and has the following options:
+   * :proof_field - which field carries the embedded proof. Defaults to "proof".
+   * ignore: [] - list of fields to ignore. Defaults to ["id"].
+   * :signature_field - which field carries the detached signature. Defaults to "signature".
+   * :key_extractor - a function that retreives public key needed to verify embedded proof. Defaults to taking 0th element of DID.all_by_string ran against "verificationMethod" field of the proof object.
+  As per https://www.w3.org/TR/vc-data-model/, proof object may be a list, this function accounts for it.
+  Uses Uptight.Result for returning a value. Exceptions are wrapped in Err and aren't re-raised.
+  """
+  @spec verify_map(map(), list(), list()) :: Result.t()
+  def verify_map(
+        %{} = verifiable_map,
+        overrides \\ [],
+        defaults \\ [
+          proof_field: "proof",
+          signature_field: "signature",
+          key_extractor: fn proof_map ->
+            Map.get(proof_map, "verificationMethod")
+          end,
+          ignore: ["id"]
+        ]
+      ) do
+    Result.new(fn ->
+      opts = Keyword.merge(defaults, overrides)
+
+      verifiable_canonical =
+        Enum.reduce(
+          [opts[:proof_field] | opts[:ignore]],
+          verifiable_map,
+          fn x, acc ->
+            Map.delete(acc, x)
+          end
+        )
+        |> canonicalise_term!()
+
+      proofs =
+        case Map.get(verifiable_map, opts[:proof_field]) do
+          proofs = [_ | _] -> proofs
+          [] -> throw(%{"empty proof list" => verifiable_map})
+          proof -> [proof]
+        end
+
+      valid_until =
+        Map.get(verifiable_map, "validUntil", Map.get(verifiable_map, "expirationDate"))
+
+      if valid_until do
+        t1 = valid_until |> Tau.from_raw_utc_iso8601!()
+        :lt = DateTime.compare(Tau.now(), t1)
+      end
+
+      true =
+        Enum.reduce_while(
+          proofs,
+          false,
+          &verify_step(&1, &2, opts, verifiable_canonical, verifiable_map)
+        )
+    end)
+  end
+
+  defp verify_step(proof_map, _, opts, verifiable_canonical, verifiable_map) do
+    extracted = %{
+      public: opts[:key_extractor].(proof_map),
+      signature: Map.get(proof_map, opts[:signature_field])
+    }
+
+    extracted
+    |> verify_one_sig(verifiable_canonical, verifiable_map)
+  end
+
+  defp verify_one_sig(detached_sig, verifiable_canonical, verifiable_map) do
+    if verify_raw(verifiable_canonical |> Jason.encode!(), detached_sig) do
+      {:cont, true}
+    else
+      {:halt,
+       %{
+         "signature verification failed" => %{
+           "verifiable object" => verifiable_map,
+           "canonical representation" => verifiable_canonical,
+           "detached signature" => detached_sig
+         }
+       }}
+    end
+  end
+
+  @doc """
+  Keypairs are encoded with `Binary.t()`, but it will change once we move back to the total `Uptight.Base.t()` APIs everywhere!
+  Signs a map and embeds detached signature into it.
+  This function is configurable via options and has the following options:
+   * :proof_field - which field carries the embedded proof. Defaults to "proof".
+   * :signature_field - which field of the proof carries the detached signature. Defaults to "signature".
+   * :signature - if present, this function won't use :secret from keypair, but instead will add this signature verbatim. No verification shall be conducted in case the signature provided is invalid!
+   * :key_field - which field of the proof stores information related to key retrieval. Defaults to "verificationMethod".
+   * :key_field_constructor - a function that takes the public key and options and constructs value for :key_field, perhaps stateful. By default it queries for a DID corresponding to the key and returns its string representation.
+   * :if_did_missing - if set to :insert, default key constructor will insert a new DID, otherwise will error out. By default set to :fail.
+   * ignore: [] - list of fields to omit from building a canonicalised object. Defaults to ["id"].
+  """
+  @spec sign_map(keypair_opt(), map(), list(), list()) :: Result.t()
+  def sign_map(
+        kp,
+        the_map,
+        overrides \\ [],
+        defaults \\ sign_map_def_opts()
+      ) do
+    Result.new(fn ->
+      opts = Keyword.merge(defaults, overrides)
+
+      to_prove =
+        Enum.reduce(
+          opts[:ignore],
+          the_map,
+          fn x, acc ->
+            Map.delete(acc, x)
+          end
+        )
+
+      canonical_claim = to_prove |> canonicalise_term!()
+      %{signature: sig, public: pk} = canonical_claim |> canonical_sign!(kp)
+      did = opts[:key_field_constructor].(pk, opts) |> Result.from_ok()
+      issuer = did
+
+      # proof_map = Proof.from_signature64!(issuer, sig |> raw_binary2raw_base()) |> Proof.to_map()
+      proof_map = sig64_to_proof_map(issuer, sig |> raw_binary2raw_base())
+      Map.put(to_prove, opts[:proof_field], proof_map)
+    end)
+  end
+
+  @doc """
+  Keypairs are encoded with `Binary.t()`, but it will change once we move back to the total `Uptight.Base.t()` APIs everywhere!
+  """
+  @spec sign_map!(keypair_opt(), map(), list(), list()) :: map
+  def sign_map!(kp, to_prove, overrides \\ [], defopts \\ sign_map_def_opts()) do
+    sign_map(kp, to_prove, overrides, defopts) |> Result.from_ok()
+  end
+
+  @spec sign_map_def_opts :: [
+          {:key_field_constructor, (any, any -> any)}
+          | {:key_field, <<_::144>>}
+          | {:proof_field, <<_::40>>}
+          | {:signature_field, <<_::72>>},
+          ...
+        ]
+  def sign_map_def_opts() do
+    [
+      proof_field: "proof",
+      signature_field: "signature",
+      key_field: "verificationMethod",
+      key_field_constructor: fn pk, _opts ->
+        # TODO: rename fwrap to thunk.
+        # See: https://github.com/doma-engineering/dyn_hacks/issues/1
+        Result.new(fwrap(pk |> raw_binary2raw_base()))
+      end,
+      ignore: ["id"]
+    ]
+  end
+
+  @spec canonical_sign!(canonicalised_value, keypair) :: detached_sig()
+  def canonical_sign!(canonical_term, kp) do
+    canonical_sign(canonical_term, kp) |> Result.from_ok()
+  end
+
+  @spec canonical_sign(canonicalised_value(), keypair()) :: Result.t()
+  def canonical_sign(canonical_term, kp) do
+    Result.new(fn ->
+      true = is_canonicalised?(canonical_term)
+      Jason.encode!(canonical_term) |> T.new!() |> sign(kp)
+    end)
+  end
+
+  @doc """
+  Keyed (salted) generic hash of an iolist, represented as a URL-safe Base64 string.
+  The key is obtained from the application configuration's paramterer "hash_salt".
+  Note: this parameter is expected to be long-lived and secret.
+  Note: the hash size is crypto_generic_BYTES, manually written down as
+  @hash_size macro in this file.
+  """
+  # @spec salted_hash(T.t()) :: String.t()
+  defp salted_hash(msg) do
+    with key <- Application.get_env(:doma, :crypto) |> Keyword.fetch!(:hash_salt) |> T.un() do
+      C.generichash(@hash_size, msg, key) |> raw_binary2raw_base()
+    end
+  end
+
+  # @spec bland_hash(T.t()) :: String.t()
+  defp bland_hash(msg) do
+    C.generichash(@hash_size, msg) |> raw_binary2raw_base()
+  end
+
+  @doc """
+  Unkeyed generic hash of message, represented as a URL-safe Base64 string.
+  Note: the hash size is crypto_generic_BYTES, manually written down as
+  @hash_size macro in this file.
+  """
+  @spec hash(T.t()) :: B.Urlsafe.t()
+  def hash(msg) do
+    C.generichash(@hash_size, msg) |> B.raw_to_urlsafe!()
+  end
+
+  @spec canonicalise_term(canonicalisable_value()) :: Result.t()
+  #          {:ok, canonicalised_value()} | {:error, any()}
+  def canonicalise_term(x), do: Result.new(fn -> canonicalise_term!(x) end)
+
+  @spec is_canonicalised?(any()) :: boolean()
+  def is_canonicalised?(<<_::binary>>), do: true
+  def is_canonicalised?(x) when is_number(x), do: true
+  def is_canonicalised?([]), do: true
+  def is_canonicalised?([x | rest]), do: is_canonicalised?(x) && is_canonicalised?(rest)
+  def is_canonicalised?(_), do: false
+
+  @doc """
+    Preventing canonicalisation bugs by ordering maps lexicographically into a
+    list. NB! This makes it so that list representations of JSON objects are
+    also accepted by verifiers, but it's OK, since no data can seemingly be
+    falsified like this.
+    TODO: Audit this function really well, both here and in JavaScript reference
+    implementation, since a bug here can sabotage the security guarantees of the
+    cryptographic system.
+  """
+  @spec canonicalise_term!(canonicalisable_value()) :: canonicalised_value()
+  def canonicalise_term!(v) when is_binary(v) or is_number(v) do
+    v
+  end
+
+  def canonicalise_term!(%T{} = v) do
+    T.un(v)
+  end
+
+  def canonicalise_term!(%Binary{} = v) do
+    B.safe!(v).encoded
+  end
+
+  def canonicalise_term!(%B.Urlsafe{encoded: x}) do
+    x
+  end
+
+  def canonicalise_term!(v) when is_atom(v) do
+    Atom.to_string(v)
+  end
+
+  def canonicalise_term!(%DateTime{} = tau) do
+    DateTime.to_iso8601(tau)
+  end
+
+  def canonicalise_term!(xs) when is_list(xs) do
+    Enum.map(xs, fn v -> canonicalise_term!(v) end)
+  end
+
+  def canonicalise_term!(%{} = kv) do
+    canonicalise_term_do(Map.keys(kv) |> Enum.sort(), kv, []) |> Enum.reverse()
+  end
+
+  def canonicalise_term!(xs) when is_tuple(xs) do
+    canonicalise_term!(Tuple.to_list(xs))
+  end
+
+  defp canonicalise_term_do([], _, acc), do: acc
+
+  defp canonicalise_term_do([x | rest], kv, acc) when is_atom(x) or is_binary(x) do
+    x_canonicalised =
+      if is_atom(x) do
+        Atom.to_string(x)
+      else
+        x
+      end
+
+    canonicalise_term_do(rest, kv, [[x_canonicalised, canonicalise_term!(kv[x])] | acc])
+  end
+
+  @doc """
+  See #26!
+  """
+  @spec sig64_to_proof_map(String.t(), String.t(), DateTime.t() | nil) :: map()
+  def sig64_to_proof_map(<<issuer::binary>>, <<sig64::binary>>, timestamp \\ nil) do
+    timestamp =
+      if timestamp |> is_nil do
+        Tau.now() |> DateTime.to_string()
+      else
+        timestamp
+      end
+
+    %{
+      "verificationMethod" => issuer,
+      "signature" => sig64,
+      "created" => timestamp,
+      "type" => "Libsodium2021",
+      "proofPurpose" => "assertionMethod"
+    }
+  end
+
+  defp server_keypair64() do
+    server_keypair() |> map(&raw_binary2raw_base/1)
+  end
+
+  defp raw_base2raw_binary(<<x::binary>>) do
+    B.mk_url!(x).raw
+  end
+
+  defp raw_base2raw_binary(%T{text: x}) do
+    raw_base2raw_binary(x)
+  end
+
+  defp raw_base2raw_binary(%B.Urlsafe{raw: x}) do
+    x
+  end
+
+  defp raw_binary2raw_base(<<x::binary>>) do
+    B.raw_to_urlsafe!(x).encoded
+  end
+
+  defp raw_binary2raw_base(%Binary{binary: x}) do
+    raw_binary2raw_base(x)
+  end
+
+  defp raw_binary2raw_base(%B.Urlsafe{encoded: x}) do
+    x
+  end
+
+  @spec randombytes_enc(pos_integer()) :: String.t()
+  def randombytes_enc(size \\ 32) do
+    randombytes(size).encoded
+  end
+
+  @spec randombytes_raw(pos_integer()) :: binary()
+  def randombytes_raw(size \\ 32) do
+    C.randombytes(size)
+  end
+
+  @spec randombytes(pos_integer()) :: Uptight.Base.Urlsafe.t()
+  def randombytes(size \\ 32) do
+    randombytes_raw(size) |> Uptight.Binary.new!() |> Uptight.Base.safe!()
+  end
 end
