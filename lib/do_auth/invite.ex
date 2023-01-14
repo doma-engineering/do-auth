@@ -29,12 +29,17 @@ defmodule DoAuth.Invite do
     )
   end
 
+  @spec server_public_key() :: B.Urlsafe.t()
+  def server_public_key() do
+    Crypto.server_keypair()[:public] |> B.safe!()
+  end
+
   @spec init(any) :: {:ok, map()}
   def init(_args) do
     state0 =
       case Persist.load_state(__MODULE__) do
         nil ->
-          spk = Crypto.urlsafe_server_keypair()[:public]
+          spk = server_public_key()
           root_invite = mk_invites(spk, 100_000)
           root_invite_id = sig(root_invite)
 
