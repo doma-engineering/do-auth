@@ -29,12 +29,17 @@ defmodule DoAuth.Invite do
     )
   end
 
+  @spec safe_server_keypair() :: B.Urlsafe.t()
+  def safe_server_keypair() do
+    Crypto.server_keypair()[:public] |> B.safe!()
+  end
+
   @spec init(any) :: {:ok, map()}
   def init(_args) do
     state0 =
       case Persist.load_state(__MODULE__) do
         nil ->
-          spk = Crypto.urlsafe_server_keypair()[:public]
+          spk = safe_server_keypair()
           root_invite = mk_invites(spk, 100_000)
           root_invite_id = sig(root_invite)
 
@@ -60,7 +65,7 @@ defmodule DoAuth.Invite do
 
   @spec unpaid_users_allowed_until :: DateTime.t()
   def unpaid_users_allowed_until() do
-    ~N[2023-02-23 20:22:02] |> DateTime.from_naive!("Etc/UTC")
+    ~N[2024-02-23 20:22:02] |> DateTime.from_naive!("Etc/UTC")
   end
 
   @spec remind_to_pay_from :: DateTime.t()

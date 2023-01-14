@@ -47,7 +47,7 @@ defmodule DoAuth.MixProject do
       {:jason, "~> 1.3"},
       {:enacl, "~> 1.2.1"},
       {:dyn_hacks, "~> 0.1.0"},
-      {:uptight, "~> 0.2.6-rc"},
+      {:uptight, "~> 0.2.10-rc"},
       {:persist, "~> 0.2.0-rc"},
       {:doma, "~> 1.0.0"},
       {:doma_witchcraft, "~> 1.0.6-doma"},
