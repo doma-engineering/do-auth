@@ -10,6 +10,7 @@ defmodule DoAuth.Credential do
 
   alias Uptight.Base, as: B
   alias Uptight.Text, as: T
+  alias Uptight.Binary
   alias Uptight.Result
 
   alias DoAuth.Crypto
@@ -43,7 +44,7 @@ defmodule DoAuth.Credential do
         opts \\ []
       ) do
     tau0 = with_opts_get_timestamp_str(opts)
-    did = pk |> B.safe!()
+    did = pk |> wrapped_in_urlsafe!()
     issuer = did.encoded
     oget = &Keyword.get(opts, &1 |> String.to_atom())
 
@@ -84,7 +85,7 @@ defmodule DoAuth.Credential do
         cred_so_far
       end
 
-      proof = mk_proof(kp, cred_so_far, opts)
+    proof = mk_proof(kp, cred_so_far, opts)
 
     cred_so_far |> Map.put("proof", proof) |> Map.put("id", proof["signature"])
   end
@@ -144,7 +145,7 @@ defmodule DoAuth.Credential do
 
       tau_oput! = &DynHacks.put_value(&1, &2, tau_oget.(&2))
 
-      issuer_str = pk |> B.safe!() |> Map.get(:encoded)
+      issuer_str = pk |> wrapped_in_urlsafe!() |> Map.get(:encoded)
 
       presentation_claim =
         %{
@@ -160,6 +161,18 @@ defmodule DoAuth.Credential do
       res = Crypto.sign_map!(kp, presentation_claim, opts)
       res |> Map.put("id", res["proof"]["signature"])
     end)
+  end
+
+  defp wrapped_in_urlsafe!(%B.Urlsafe{} = x) do
+    x
+  end
+
+  defp wrapped_in_urlsafe!(%Binary{} = x) do
+    B.binary_to_urlsafe!(x)
+  end
+
+  defp wrapped_in_urlsafe!(x) do
+    B.raw_to_urlsafe!(x)
   end
 
   @doc """
@@ -226,7 +239,7 @@ defmodule DoAuth.Credential do
 
   @spec hash_map!(Crypto.canonicalisable_value()) :: B.Urlsafe.t()
   def hash_map!(cred) do
-    Crypto.canonicalise_term!(cred) |> Jason.encode!() |> Crypto.hash()
+    Crypto.canonicalise_term!(cred) |> Jason.encode!() |> T.new!() |> Crypto.hash()
   end
 
   @spec hash_map(Crypto.canonicalisable_value()) :: Result.t()
@@ -286,7 +299,6 @@ defmodule DoAuth.Credential do
       when mk_or_present_cred == :mk_credential or mk_or_present_cred == :present_credential do
     fetch_cred_maybe = fn ->
       payload_hash = hash_map!(payload_map).encoded
-
       existing = Map.get(ps, payload_hash)
 
       res = (is_nil(existing) && new_cred(mk_or_present_cred, kp, payload_map, opts)) || existing
@@ -457,6 +469,7 @@ defmodule DoAuth.Credential do
   end
 
   defp mk_proof(kp, cred_so_far, opts) do
+    require Logger
     (Keyword.has_key?(opts, :signature) &&
        Crypto.sig64_to_proof_map(kp[:public], opts[:signature], opts[:timestamp])) ||
       Crypto.sign_map!(kp, cred_so_far, opts) |> Map.get("proof")

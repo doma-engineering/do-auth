@@ -9,6 +9,8 @@ defmodule Tau do
   alias Uptight.Text, as: T
   alias Uptight.Result
 
+  import Uptight.Assertions
+
   @spec resolve_old(DateTime.t()) :: DateTime.t()
   def resolve_old(dt), do: DateTime.truncate(dt, :second)
 
@@ -34,12 +36,14 @@ defmodule Tau do
       {:ok, res, 0} ->
         res |> resolve() |> Result.Ok.new()
 
-      {:error, e} ->
-        %{"DateTime.from_iso8601 failed" => e} |> Result.Err.new()
+      {:error, e} -> Result.new(fn ->
+        assert false, "DateTime.from_iso8601 failed: #{e}"
+      end)
 
-      x ->
-        %{"non-zero calendar offset produced, please submit a UTC timestamp" => x}
-        |> Result.Err.new()
+      {:ok, _, x} ->
+        Result.new(fn ->
+          assert (x == 0), "non-zero calendar offset #{x} produced, please submit a UTC timestamp"
+        end)
     end
   end
 

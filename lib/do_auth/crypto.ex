@@ -9,13 +9,14 @@ defmodule DoAuth.Crypto do
   alias Uptight.Binary
   alias Uptight.Result
   import Uptight.Assertions
-  require Uptight.Assertions
 
   alias :enacl, as: C
 
   import Witchcraft.Functor
 
   import DynHacks
+
+  require Logger
 
   ########################################
   ####             Types!             ####
@@ -130,8 +131,10 @@ defmodule DoAuth.Crypto do
           | list(canonicalisable_value())
           | %{canonicalisable_key() => canonicalisable_value()}
 
-  @type canonicalised_value ::
-          B.t() | T.t() | number() | list(list(T.t() | canonicalised_value()))
+  @typedoc """
+  Canonicalised values are either number, text, urlsafe base64, or list of canonicalised values.
+  """
+  @type canonicalised_value :: number() | T.t() | B.Urlsafe.t() | list(canonicalised_value())
 
   ########################################
   ####  Pure cryptographic functions  ####
@@ -274,12 +277,31 @@ defmodule DoAuth.Crypto do
     sign_raw(msg |> unwrap_message(), kp |> unwrap_keypair())
   end
 
+  defp unwrap_message(%Binary{} = msg) do
+    B.binary_to_urlsafe!(msg).encoded
+  end
+
+  defp unwrap_message(%B.Urlsafe{} = msg) do
+    msg.encoded
+  end
+
   defp unwrap_message(%T{} = msg) do
-    msg |> T.un()
+    msg.text
+  end
+
+  defp unwrap_message(msg) when is_number(msg) do
+    "#{msg}"
   end
 
   defp unwrap_message(msg) when is_list(msg) do
-    msg |> map(&T.un/1)
+    msg |> map(&unwrap_message/1)
+  end
+
+  defp unwrap_message(msg) when is_binary(msg) do
+    case T.new(msg) do
+      %Result.Ok{ok: ok} -> unwrap_message(ok)
+      %Result.Err{} -> Binary.new!(msg) |> unwrap_message()
+    end
   end
 
   defp unwrap_keypair(%{secret: %Binary{}, public: %Binary{}} = kp) do
@@ -433,7 +455,6 @@ defmodule DoAuth.Crypto do
     |> String.slice(0..(length - 1))
   end
 
-  # Explain this function with @doc.
   @doc """
   To generate server keypair, we use two bound functions: cenv and kp_maybe.
   cenv is a function that returns the current environment of :doma application. It's just a thunk.
@@ -633,11 +654,11 @@ defmodule DoAuth.Crypto do
 
       canonical_claim = to_prove |> canonicalise_term!()
       %{signature: sig, public: pk} = canonical_claim |> canonical_sign!(kp)
-      did = opts[:key_field_constructor].(pk, opts) |> Result.from_ok()
-      issuer = did
+      %B.Urlsafe{} = did = opts[:key_field_constructor].(pk, opts) |> Result.from_ok()
+      %B.Urlsafe{encoded: issuer_encoded} = did
 
       # proof_map = Proof.from_signature64!(issuer, sig |> raw_binary2raw_base()) |> Proof.to_map()
-      proof_map = sig64_to_proof_map(issuer, sig |> raw_binary2raw_base())
+      proof_map = sig64_to_proof_map(issuer_encoded, sig.encoded)
       Map.put(to_prove, opts[:proof_field], proof_map)
     end)
   end
@@ -651,7 +672,7 @@ defmodule DoAuth.Crypto do
   end
 
   @spec sign_map_def_opts :: [
-          {:key_field_constructor, (any, any -> any)}
+          {:key_field_constructor, (B.Urlsafe.t(), any -> any)}
           | {:key_field, <<_::144>>}
           | {:proof_field, <<_::40>>}
           | {:signature_field, <<_::72>>},
@@ -665,13 +686,15 @@ defmodule DoAuth.Crypto do
       key_field_constructor: fn pk, _opts ->
         # TODO: rename fwrap to thunk.
         # See: https://github.com/doma-engineering/dyn_hacks/issues/1
-        Result.new(fwrap(pk |> raw_binary2raw_base()))
+        Result.new(fwrap(pk))
       end,
       ignore: ["id"]
     ]
   end
 
-  @spec canonical_sign!(canonicalised_value, keypair) :: detached_sig()
+  # This typing makes me very sad. I wish we had a way to just say that binary things are Binary and somehow get an automatic accessor for .encoded with variants, having default encoding as "URL-safe Base64".
+  # TODO: as I write this, I realise that it's typeclass territory. We need to have a typeclass for "encodable things" and then we can have a typeclass instance for Binary.t() that would provide .encoded and .raw accessors.
+  @spec canonical_sign!(canonicalised_value, keypair) :: detached_sig_b64()
   def canonical_sign!(canonical_term, kp) do
     canonical_sign(canonical_term, kp) |> Result.from_ok()
   end
@@ -679,7 +702,7 @@ defmodule DoAuth.Crypto do
   @spec canonical_sign(canonicalised_value(), keypair()) :: Result.t()
   def canonical_sign(canonical_term, kp) do
     Result.new(fn ->
-      true = is_canonicalised?(canonical_term)
+      assert is_canonicalised?(canonical_term), "canonical_term must be canonicalised"
       Jason.encode!(canonical_term) |> T.new!() |> sign(kp)
     end)
   end
@@ -691,26 +714,20 @@ defmodule DoAuth.Crypto do
   Note: the hash size is crypto_generic_BYTES, manually written down as
   @hash_size macro in this file.
   """
-  # @spec salted_hash(T.t()) :: String.t()
-  defp salted_hash(msg) do
+  @spec salted_hash(T.t()) :: B.Urlsafe.t()
+  def salted_hash(%T{} = msg) do
     with key <- Application.get_env(:doma, :crypto) |> Keyword.fetch!(:hash_salt) |> T.un() do
-      C.generichash(@hash_size, msg, key) |> raw_binary2raw_base()
+      C.generichash(@hash_size, msg |> T.un(), key) |> B.raw_to_urlsafe!()
     end
-  end
-
-  # @spec bland_hash(T.t()) :: String.t()
-  defp bland_hash(msg) do
-    C.generichash(@hash_size, msg) |> raw_binary2raw_base()
   end
 
   @doc """
   Unkeyed generic hash of message, represented as a URL-safe Base64 string.
-  Note: the hash size is crypto_generic_BYTES, manually written down as
-  @hash_size macro in this file.
+  Note: the hash size is crypto_generic_BYTES, manually written down as @hash_size macro in this file.
   """
   @spec hash(T.t()) :: B.Urlsafe.t()
-  def hash(msg) do
-    C.generichash(@hash_size, msg) |> B.raw_to_urlsafe!()
+  def hash(%T{} = msg) do
+    C.generichash(@hash_size, msg |> T.un()) |> B.raw_to_urlsafe!()
   end
 
   @spec canonicalise_term(canonicalisable_value()) :: Result.t()
@@ -734,7 +751,14 @@ defmodule DoAuth.Crypto do
     cryptographic system.
   """
   @spec canonicalise_term!(canonicalisable_value()) :: canonicalised_value()
-  def canonicalise_term!(v) when is_binary(v) or is_number(v) do
+  def canonicalise_term!(v) when is_binary(v) do
+    case T.new(v) do
+      %Result.Ok{ok: y} -> T.un(y)
+      %Result.Err{} -> B.raw_to_urlsafe!(v).encoded
+    end
+  end
+
+  def canonicalise_term!(v) when is_number(v) do
     v
   end
 
@@ -746,8 +770,8 @@ defmodule DoAuth.Crypto do
     B.safe!(v).encoded
   end
 
-  def canonicalise_term!(%B.Urlsafe{encoded: x}) do
-    x
+  def canonicalise_term!(%B.Urlsafe{} = v) do
+    v.encoded
   end
 
   def canonicalise_term!(v) when is_atom(v) do
@@ -804,31 +828,20 @@ defmodule DoAuth.Crypto do
     }
   end
 
-  defp server_keypair64() do
-    server_keypair() |> map(&raw_binary2raw_base/1)
-  end
-
-  defp raw_base2raw_binary(<<x::binary>>) do
+  @spec raw_base2raw_binary(T.t() | binary() | B.Urlsafe.t() | Binary.t()) :: binary()
+  def raw_base2raw_binary(<<x::binary>>) do
     B.mk_url!(x).raw
   end
 
-  defp raw_base2raw_binary(%T{text: x}) do
-    raw_base2raw_binary(x)
+  def raw_base2raw_binary(%B.Urlsafe{} = x) do
+    x.raw
   end
 
-  defp raw_base2raw_binary(%B.Urlsafe{raw: x}) do
-    x
+  def raw_binary2raw_base(<<x::binary>>) do
+    B.raw_to_urlsafe!(x).raw
   end
 
-  defp raw_binary2raw_base(<<x::binary>>) do
-    B.raw_to_urlsafe!(x).encoded
-  end
-
-  defp raw_binary2raw_base(%Binary{binary: x}) do
-    raw_binary2raw_base(x)
-  end
-
-  defp raw_binary2raw_base(%B.Urlsafe{encoded: x}) do
+  def raw_binary2raw_base(%Binary{binary: x}) do
     x
   end
 

@@ -119,11 +119,11 @@ defmodule DoAuth.Invite do
     Result.new(fn ->
       invite = get_root_invite()
       assert is_invite_vacant(invite), "Invite must not be already fulfilled."
-      is_valid = Crypto.verify_map(invite) |> IO.inspect
+      is_valid = Crypto.verify_map(invite) |> IO.inspect()
       assert Result.is_ok?(is_valid), "Invite must be a valid credential."
 
-      r_m(
-        Credential.present_credential_map!(Crypto.binary_server_keypair(), invite,
+      tap(
+        Credential.present_credential_map!(Crypto.server_keypair(), invite,
           credentialSubject: %{"generatedAt" => Tau.now() |> Crypto.canonicalise_term!()}
         ),
         &register_fulfillment(invite, &1)
@@ -154,7 +154,7 @@ defmodule DoAuth.Invite do
       true = Crypto.verify_map(root_invite) |> Result.is_ok?()
 
       r_m(
-        Credential.mk_credential!(Crypto.binary_server_keypair(), %{
+        Credential.mk_credential!(Crypto.server_keypair(), %{
           "invite" => sig(root_invite),
           "holder" => pk.encoded,
           # TODO: Make use of names
@@ -293,7 +293,7 @@ defmodule DoAuth.Invite do
                   "The invite is cryptographically sound."
 
            res =
-             Credential.mk_credential!(Crypto.binary_server_keypair(), %{
+             Credential.mk_credential!(Crypto.server_keypair(), %{
                "invite" => cred_id,
                "presentation" => pres_id,
                "holder" => pk.encoded,
