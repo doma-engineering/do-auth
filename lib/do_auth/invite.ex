@@ -119,7 +119,7 @@ defmodule DoAuth.Invite do
     Result.new(fn ->
       invite = get_root_invite()
       assert is_invite_vacant(invite), "Invite must not be already fulfilled."
-      is_valid = Crypto.verify_map(invite) |> IO.inspect()
+      is_valid = Crypto.verify_map(invite)
       assert Result.is_ok?(is_valid), "Invite must be a valid credential."
 
       tap(
